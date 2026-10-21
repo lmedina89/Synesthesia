@@ -144,7 +144,7 @@ export const MusicXML = (() => {
     for(const n of rawNotes){
       const fifths=rawMeasures[n.measure]?.keyFifths||0;
       const inKey=(fifths>0?keys:flats).slice(0,Math.abs(fifths)).includes(n.step)?Math.sign(fifths):0;
-      const id=n.part+':'+n.measure+':'+n.clef;
+      const id=n.part+':'+n.measure+':'+n.track;
       if(!localAccidentals.has(id))localAccidentals.set(id,new Map());
       const state=localAccidentals.get(id),key=n.step+n.octave;
       const current=state.has(key)?state.get(key):inKey;

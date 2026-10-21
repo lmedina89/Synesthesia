@@ -180,13 +180,13 @@
     .score-frame{overflow:hidden;background:#f6f1e7;color:#2a2338;border:1px solid #968da8;border-radius:14px;margin:10px 0;}
     .score-topline{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;background:#302942;color:#f6eeff;font-size:12px;}
     .score-topline .score-help{font-size:10px;color:#d1c2eb;}
-    .score-canvas{display:block;width:100%;height:255px;touch-action:pan-y;}
+    .score-canvas{display:block;width:100%;height:360px;touch-action:pan-y;}
     .score-footer{background:#ede4f3;padding:8px 12px;color:#534667;font-size:11px;line-height:1.4;}
     .song-key-label.every{font-size:9px;bottom:7px;}
     .song-black .song-key-label.every{position:absolute;display:block;top:34px;left:-1px;width:19px;line-height:11px;font-size:8px;color:#fff9ed;font-weight:750;writing-mode:vertical-rl;transform:rotate(180deg);pointer-events:none;}
     .song-status-small{margin-top:6px;font-size:11px;color:#e5c9ac;line-height:1.45;}
     .library-actions .export-pack{background:#e2d0ff!important;color:#281c39!important;}
-    @media(max-width:650px){.score-canvas{height:228px}.score-topline{flex-wrap:wrap;}.score-settings{gap:9px}.score-settings label{width:100%;justify-content:space-between}.score-settings select{min-width:160px}.live-readout{padding:9px 12px;min-height:60px}}
+    @media(max-width:650px){.score-canvas{height:334px}.score-topline{flex-wrap:wrap;}.score-settings{gap:9px}.score-settings label{width:100%;justify-content:space-between}.score-settings select{min-width:160px}.live-readout{padding:9px 12px;min-height:60px}}
     .footer{text-align:center;color:#8880a8;font-size:11px;line-height:1.5;margin:24px auto 0;max-width:690px;}
     @media(max-width:750px){.app{padding:17px 12px 34px;}.topline{margin-bottom:20px}.hero{grid-template-columns:1fr;gap:15px}.scoreboard{justify-content:flex-start}.score{min-width:83px}.toolbar{padding:12px;gap:13px}.instruments{padding:16px 10px 15px;}.lower{grid-template-columns:1fr;gap:12px;margin-top:12px;}.piano{height:clamp(185px,45vw,240px)}.keyboard-container{padding:10px 6px 12px}.piano-black{width:8.1%;}.mode-tabs button{padding:8px 11px;}}
     @media(max-width:400px){.score{padding:9px 13px}.score-value{font-size:21px}.segmented button{padding:9px 11px}.instrument-controls{gap:9px}.tine-row{gap:2px}.kalimba-stage{padding-left:4px;padding-right:4px}.trainer{padding:16px}.mode-tabs button{font-size:10px;padding:8px 7px;}.kalimba-note-grid{gap:4px}.kalimba-note-grid button{font-size:10px}}

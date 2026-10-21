@@ -23,7 +23,7 @@ export function createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,get
     lastTouchedNotes=notes.filter(n=>Number.isFinite(n)&&n>=21&&n<=108).slice(-10);
     const names=lastTouchedNotes.map(midiName);
     $('liveNoteName').textContent=names.length?names.join(' + '):'—';
-    $('liveNoteDetail').innerHTML=lastTouchedNotes.length?(lastTouchedNotes.length>1?'<b>Chord / multiple notes</b>':'<b>'+ (lastTouchedNotes[0]===60?'Middle C · ':'')+'Note played</b>')+' · '+lastTouchedNotes.map(n=>midiSharp(n)?midiName(n).replace('#','♯')+' / '+NOTES[(n+1)%12]+'♭'+Math.floor(n/12-1):midiName(n)).join(' · '):'Press any piano key to identify it.';
+    $('liveNoteDetail').innerHTML=lastTouchedNotes.length?(lastTouchedNotes.length>1?'<b>Last touched chord</b>':'<b>'+ (lastTouchedNotes[0]===60?'Middle C · ':'')+'Last key touched</b>')+' · '+lastTouchedNotes.map(n=>midiSharp(n)?midiName(n).replace('#','♯')+' / '+NOTES[(n+1)%12]+'♭'+Math.floor(n/12-1):midiName(n)).join(' · '):'Press any piano key to identify it.';
     renderSongStaff(getContext().songPosition);
   }
   function songStaffHand(note){return Notation.assignStaff(note,getContext().song?.tracks||[]);}

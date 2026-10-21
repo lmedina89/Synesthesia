@@ -1,4 +1,4 @@
-# Garden Notes v0.13 — music notation module architecture
+# Garden Notes v0.13.1 — music notation module architecture
 
 ## Boundary: normalized timed notes vs printed musical score
 

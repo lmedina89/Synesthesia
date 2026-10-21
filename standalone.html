@@ -189,13 +189,13 @@
     .score-frame{overflow:hidden;background:#f6f1e7;color:#2a2338;border:1px solid #968da8;border-radius:14px;margin:10px 0;}
     .score-topline{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;background:#302942;color:#f6eeff;font-size:12px;}
     .score-topline .score-help{font-size:10px;color:#d1c2eb;}
-    .score-canvas{display:block;width:100%;height:255px;touch-action:pan-y;}
+    .score-canvas{display:block;width:100%;height:360px;touch-action:pan-y;}
     .score-footer{background:#ede4f3;padding:8px 12px;color:#534667;font-size:11px;line-height:1.4;}
     .song-key-label.every{font-size:9px;bottom:7px;}
     .song-black .song-key-label.every{position:absolute;display:block;top:34px;left:-1px;width:19px;line-height:11px;font-size:8px;color:#fff9ed;font-weight:750;writing-mode:vertical-rl;transform:rotate(180deg);pointer-events:none;}
     .song-status-small{margin-top:6px;font-size:11px;color:#e5c9ac;line-height:1.45;}
     .library-actions .export-pack{background:#e2d0ff!important;color:#281c39!important;}
-    @media(max-width:650px){.score-canvas{height:228px}.score-topline{flex-wrap:wrap;}.score-settings{gap:9px}.score-settings label{width:100%;justify-content:space-between}.score-settings select{min-width:160px}.live-readout{padding:9px 12px;min-height:60px}}
+    @media(max-width:650px){.score-canvas{height:334px}.score-topline{flex-wrap:wrap;}.score-settings{gap:9px}.score-settings label{width:100%;justify-content:space-between}.score-settings select{min-width:160px}.live-readout{padding:9px 12px;min-height:60px}}
     .footer{text-align:center;color:#8880a8;font-size:11px;line-height:1.5;margin:24px auto 0;max-width:690px;}
     @media(max-width:750px){.app{padding:17px 12px 34px;}.topline{margin-bottom:20px}.hero{grid-template-columns:1fr;gap:15px}.scoreboard{justify-content:flex-start}.score{min-width:83px}.toolbar{padding:12px;gap:13px}.instruments{padding:16px 10px 15px;}.lower{grid-template-columns:1fr;gap:12px;margin-top:12px;}.piano{height:clamp(185px,45vw,240px)}.keyboard-container{padding:10px 6px 12px}.piano-black{width:8.1%;}.mode-tabs button{padding:8px 11px;}}
     @media(max-width:400px){.score{padding:9px 13px}.score-value{font-size:21px}.segmented button{padding:9px 11px}.instrument-controls{gap:9px}.tine-row{gap:2px}.kalimba-stage{padding-left:4px;padding-right:4px}.trainer{padding:16px}.mode-tabs button{font-size:10px;padding:8px 7px;}.kalimba-note-grid{gap:4px}.kalimba-note-grid button{font-size:10px}}
@@ -331,14 +331,14 @@
     <div id="songStaffPanel" class="score-frame" aria-label="Scrolling treble and bass staff for the song">
       <div class="score-topline"><strong>🎼 Scrolling score & pitch guide</strong><span class="score-help">Right hand • Treble&nbsp;&nbsp; | &nbsp;&nbsp;Left hand • Bass</span></div>
       <canvas id="songStaffCanvas" class="score-canvas" aria-label="Treble and bass musical staff showing the current notes and upcoming song notes" role="img"></canvas>
-      <div class="score-footer">MusicXML preserves written measures, rests, note values and clefs; MIDI uses a pitch-and-timing guide. Detailed engraving (beaming, articulation and layout) is still in development.</div>
+      <div class="score-footer">MusicXML keeps notated measures, rests, note values and clefs. MIDI shows an inferred pitch-and-timing guide, not an original score. Full engraving and complex multivoice layout are not implemented.</div>
     </div>
     <div class="song-scroll" id="songScroll" tabindex="0" aria-label="Scroll horizontally to see all 88 piano keys"><div class="song-scroll-scale" id="songScrollScale"><div class="song-scroll-inner" id="songScrollInner"><canvas id="songRoll" width="1508" height="176" aria-label="Upcoming notes falling toward the piano keys"></canvas><div id="songKeys" aria-label="Full 88-key playable song keyboard"></div></div></div></div>
     <div class="song-legend"><span>🟡 <b>Gold</b> = playing</span><span>🟢 <b>Green</b> = your next notes</span><span>🟣 <b>Purple</b> = notes you finished</span></div>
     <div class="song-feedback" id="songFeedback" aria-live="polite">Ready. Press Play to see keys light up.</div>
     <p class="song-help">Supports uncompressed partwise MusicXML (.musicxml, .xml) and standard MIDI with note data, including most piano MIDI downloads. MIDI is not an MP3 or YouTube link: audio recordings don't contain reliable individual key information. Songs with many instruments may be easier to learn by selecting a single track. The kalimba above still works; notes in its range can light up during playback too.</p>
   </section>
-  <p class="footer">v0.13 · MusicXML score import and synchronized notation · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
+  <p class="footer">v0.13.1 · MusicXML score import and synchronized notation · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
 </main>
 <div class="audio-recovery" id="audioRecovery" role="status" aria-live="polite" hidden><span id="audioRecoveryMessage">iPhone paused the piano audio. Tap to restore it.</span><button id="audioRestore" type="button">♫ Restore sound</button></div>
   <script>
@@ -680,7 +680,7 @@ const MusicXML = (() => {
     for(const n of rawNotes){
       const fifths=rawMeasures[n.measure]?.keyFifths||0;
       const inKey=(fifths>0?keys:flats).slice(0,Math.abs(fifths)).includes(n.step)?Math.sign(fifths):0;
-      const id=n.part+':'+n.measure+':'+n.clef;
+      const id=n.part+':'+n.measure+':'+n.track;
       if(!localAccidentals.has(id))localAccidentals.set(id,new Map());
       const state=localAccidentals.get(id),key=n.step+n.octave;
       const current=state.has(key)?state.get(key):inKey;
@@ -1007,117 +1007,190 @@ function createAudioEngine({state,$,noteMidi,midiName}) {
 }
 
 
+/* core/score-layout.js */
+// Pure, deterministic score-layout helpers shared by both notation renderers.
+// MIDI event time is never modified; visual x positions may be expanded to
+// avoid collisions. A playhead reads from the same time-to-x map as noteheads.
+const ScoreLayout = (() => {
+  const EPS=0.00001;
+  const DIATONIC='CDEFGAB';
+  function diatonicPosition(note,bottom,lineSpacing=14){
+    const base=note.clef==='bass'?2*7+4:4*7+2; // G2 / E4
+    const idx=DIATONIC.indexOf(note.step);
+    if(idx<0||!Number.isInteger(note.octave))throw new RangeError('Invalid notated pitch');
+    const steps=note.octave*7+idx-base;
+    return {steps,y:bottom-steps*lineSpacing/2};
+  }
+  function timeline(events,secondsPerPx=1/83,minStep=19){
+    // Start events must be chronological; sorting is local to keep source immutable.
+    const sorted=Array.from(new Set(events.filter(Number.isFinite).map(n=>Math.round(n*100000)/100000))).sort((a,b)=>a-b);
+    if(!sorted.length)return {times:[0],positions:[0],at:t=>t/secondsPerPx};
+    const positions=[sorted[0]/secondsPerPx];
+    for(let i=1;i<sorted.length;i++){
+      positions.push(positions[i-1]+Math.max((sorted[i]-sorted[i-1])/secondsPerPx,minStep));
+    }
+    function at(t){
+      if(t<=sorted[0])return positions[0]+(t-sorted[0])/secondsPerPx;
+      const last=sorted.length-1;
+      if(t>=sorted[last])return positions[last]+(t-sorted[last])/secondsPerPx;
+      let low=0,hi=last;
+      while(low+1<hi){const mid=(low+hi)>>1;if(sorted[mid]<=t)low=mid;else hi=mid;}
+      const fraction=(t-sorted[low])/(sorted[hi]-sorted[low]);
+      return positions[low]+fraction*(positions[hi]-positions[low]);
+    }
+    return {times:sorted,positions,at};
+  }
+  function noteOffsets(chord){
+    // Adjacent seconds in a written chord require opposing noteheads.
+    const sorted=[...chord].sort((a,b)=>a.y-b.y||a.midi-b.midi);
+    const result=new Map();
+    for(let i=0;i<sorted.length;i++){
+      let offset=0;
+      if(i&&Math.abs(sorted[i].y-sorted[i-1].y)<8.5){
+        const prev=result.get(sorted[i-1]);offset=prev===0?12:0;
+      }
+      result.set(sorted[i],offset);
+    }
+    return result;
+  }
+  function accidentalOffsets(notes){
+    // Accidentals vertically closer than 3 staff steps get separate columns.
+    const result=new Map(),columns=[];
+    for(const n of [...notes].filter(n=>n.accidental).sort((a,b)=>a.y-b.y)){
+      let col=columns.findIndex(lastY=>Math.abs(lastY-n.y)>=24);
+      if(col<0){col=columns.length;columns.push(n.y);}else columns[col]=n.y;
+      result.set(n,-21-12*col);
+    }
+    return result;
+  }
+  function groupAtOnset(notes){
+    // Chords in one voice receive one shared stem, not an individual stem per key.
+    const by=new Map();
+    for(const n of notes){
+      const key=n.clef+'|'+n.voice+'|'+n.start.toFixed(5);
+      if(!by.has(key))by.set(key,[]);
+      by.get(key).push(n);
+    }
+    return [...by.values()];
+  }
+  return Object.freeze({diatonicPosition,timeline,noteOffsets,accidentalOffsets,groupAtOnset});
+})();
+
+
 /* visual/staff-renderer.js */
 
 
-// Scrolling *pitch-accurate* piano staff. Screen rendering is distinct from the
-// pure Notation model, making note positions/ledger lines verifiable in tests.
-// MIDI cannot retain reliable key signatures, beaming, rests, or staff assignment.
-const StaffRenderer = (() => {
-  const {midiName,lowerBoundSong}=Theory;
-  const spacing=Notation.STAFF_LINE_SPACING;
-  const staffTop=[56,69,82,95,108],staffBass=[167,180,193,206,219];
-  const page='#fbf7ed';
 
-  function drawLedger(ctx,x,ys){
-    ctx.strokeStyle='#73657f';ctx.lineWidth=1.3;
-    for(const y of ys){ctx.beginPath();ctx.moveTo(x-12,y);ctx.lineTo(x+13,y);ctx.stroke();}
+// MIDI-only pitch guide: never fabricates key signatures, rests, barlines or
+// written rhythmic values that do not exist in the MIDI file. Keeps exact
+// pitch positions and playback times, expanding only *visual* event spacing.
+const StaffRenderer = (() => {
+  const H=370,SPACE=14,STAFF={treble:{top:62,bottom:118},bass:{top:245,bottom:301}};
+  const cache=new WeakMap();
+  const noteName=Theory.midiName;
+  function timeAxis(notes){
+    if(!cache.has(notes))cache.set(notes,ScoreLayout.timeline(notes.map(n=>n.start),1/76,42));
+    return cache.get(notes);
   }
-  function drawNote(ctx,x,y,color,pos,now,showName){
-    const up=Notation.stemDirection(pos)==='up';
-    ctx.fillStyle=color;ctx.strokeStyle=color;ctx.lineWidth=1.7;
-    ctx.beginPath();ctx.ellipse(x,y,8.2,5.5,-.28,0,Math.PI*2);ctx.fill();
-    // Stems have conventional directions. Rhythmic symbols are deliberately
-    // omitted until a quantized meter/beat model can accurately supply them.
-    ctx.beginPath();
-    if(up){ctx.moveTo(x+7.2,y);ctx.lineTo(x+7.2,y-27);}
-    else{ctx.moveTo(x-7.2,y);ctx.lineTo(x-7.2,y+27);}
-    ctx.stroke();
-    if(pos.accidental){
-      ctx.font='bold 19px serif';ctx.fillText(pos.accidental==='flat'?'♭':'♯',x-22,y+6);
+  function line(ctx,x,y0,x1,y1){ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x1,y1);ctx.stroke();}
+  function drawBase(ctx,w){
+    ctx.lineWidth=1;ctx.strokeStyle='#9b8ca3';
+    for(const s of [STAFF.treble,STAFF.bass])for(let j=0;j<5;j++)line(ctx,9,s.top+j*SPACE,w-9,s.top+j*SPACE);
+    ctx.font='60px "Apple Symbols","Noto Music",serif';ctx.fillStyle='#4e3b60';ctx.fillText('𝄞',12,115);
+    ctx.font='53px "Apple Symbols","Noto Music",serif';ctx.fillText('𝄢',17,298);
+    ctx.font='bold 10px system-ui';ctx.fillStyle='#655470';ctx.fillText('TREBLE',13,19);ctx.fillText('BASS',13,207);
+  }
+  function drawLedger(ctx,x,pos){
+    ctx.strokeStyle='#84768d';ctx.lineWidth=1.5;
+    for(const y of Notation.ledgerLines(pos,pos.bottom,SPACE)){
+      if(y<16||y>H-7)continue;
+      line(ctx,x-13,y,x+13,y);
     }
-    if(showName){
-      ctx.font='bold 10px system-ui';ctx.fillStyle='#145741';
-      ctx.fillText(midiName(now.midi),x-10,y-14);
+  }
+  function notehead(ctx,x,y,color){
+    ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x,y,8.2,5.6,-.26,0,Math.PI*2);ctx.fill();
+  }
+  function drawChord(ctx,chord){
+    const colors=chord.some(n=>n.active)?'#138668':chord[0].clef==='bass'?'#7858af':'#347fa1';
+    const offsets=ScoreLayout.noteOffsets(chord);
+    const accidents=ScoreLayout.accidentalOffsets(chord);
+    for(const n of chord){
+      const x=n.x+(offsets.get(n)||0),y=n.y;
+      if(y<26||y>H-18){ctx.fillStyle=n.color;ctx.font='bold 11px system-ui';
+        ctx.fillText((y<26?'↑ ':'↓ ')+noteName(n.midi),x,y<26?27:H-18);continue;
+      }
+      drawLedger(ctx,x,n);
+      if(n.accidental){ctx.font='bold 20px "Noto Music",serif';ctx.fillStyle=n.color;
+        ctx.fillText(n.accidental,x+(accidents.get(n)||-21),y+6);
+      }
+      notehead(ctx,x,y,n.color);
+    }
+    const drawable=chord.filter(n=>n.y>=26&&n.y<=H-18);
+    if(drawable.length){
+      const ordered=[...drawable].sort((a,b)=>a.y-b.y);
+      const top=ordered[0],bottom=ordered.at(-1);
+      const direction=(top.y+bottom.y)/2>(STAFF[top.clef].top+2*SPACE)?1:-1;
+      const start=direction>0?bottom:top,end=direction>0?top:bottom;
+      ctx.strokeStyle=colors;ctx.lineWidth=1.7;
+      const x=start.x+(direction>0?8:-8);
+      line(ctx,x,start.y,x,end.y+(direction>0?-31:31));
     }
   }
   function renderSongStaff({at,scoreCanvas,scoreContainer,song,selectedSongNotes,lastTouchedNotes,scoreLabels,stepActive,songStaffHand}){
     if(scoreContainer.hidden)return;
-    const cssWidth=Math.max(250,scoreCanvas.clientWidth||330),cssHeight=scoreCanvas.clientHeight||255;
-    const scale=Math.min(2,window.devicePixelRatio||1);
-    const devW=Math.round(cssWidth*scale),devH=Math.round(cssHeight*scale);
-    if(scoreCanvas.width!==devW||scoreCanvas.height!==devH){scoreCanvas.width=devW;scoreCanvas.height=devH;}
+    const width=Math.max(250,scoreCanvas.clientWidth||330),height=scoreCanvas.clientHeight||340,dpr=Math.min(2,window.devicePixelRatio||1);
+    if(scoreCanvas.width!==Math.round(width*dpr)||scoreCanvas.height!==Math.round(height*dpr)){
+      scoreCanvas.width=Math.round(width*dpr);scoreCanvas.height=Math.round(height*dpr);
+    }
     const ctx=scoreCanvas.getContext('2d');if(!ctx)return;
-    ctx.setTransform(scale,0,0,scale,0,0);
-    const w=cssWidth,h=cssHeight,factor=h/255;
-    ctx.clearRect(0,0,w,h);ctx.fillStyle=page;ctx.fillRect(0,0,w,h);
-    ctx.save();ctx.scale(1,factor);
-    const x0=Math.min(112,Math.max(92,w*.29));const speed=w<480?70:90;
-    for(const ys of [staffTop,staffBass]){
-      ctx.strokeStyle='#8f819a';ctx.lineWidth=1;
-      for(const y of ys){ctx.beginPath();ctx.moveTo(12,y);ctx.lineTo(w-10,y);ctx.stroke();}
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,width,height);ctx.fillStyle='#fbf7ed';ctx.fillRect(0,0,width,height);
+    ctx.save();ctx.scale(1,height/H);drawBase(ctx,width);
+    const x0=Math.min(Math.max(139,width*.34),190);
+    const axis=timeAxis(selectedSongNotes),offset=x0-axis.at(at);
+    const xAt=t=>axis.at(t)+offset;
+    const visible=[];
+    // Binary-search at the viewport edge rather than traversing the entire song.
+    const times=axis.times;
+    const minX=x0-27,maxX=width+28;
+    let lower=0,upper=times.length;
+    while(lower<upper){const mid=(lower+upper)>>1;if(xAt(times[mid])<minX)lower=mid+1;else upper=mid;}
+    // Earlier sustained notes are also considered, bounded to the last 200 notes.
+    const approxTime=times[Math.max(0,lower-1)]||0;
+    const start=Theory.lowerBoundSong(selectedSongNotes,approxTime);
+    for(let i=Math.max(0,start-200);i<selectedSongNotes.length;i++){
+      const n=selectedSongNotes[i],x=xAt(n.start);
+      if(x>maxX)break;
+      if(x<minX||n.end<at-3)continue;
+      const clef=songStaffHand(n)==='bass'?'bass':'treble';
+      const pos=Notation.position(n.midi,clef,STAFF[clef].bottom,SPACE);
+      const active=(n.start<=at&&n.end>at)||stepActive.has(n.midi);
+      visible.push({...n,clef,voice:'1',x,y:pos.y,steps:pos.steps,bottom:STAFF[clef].bottom,active,
+        color:active?'#11836b':clef==='bass'?'#7b5bae':'#397fa6',
+        accidental:pos.accidental==='sharp'?'♯':pos.accidental==='flat'?'♭':''});
+      if(visible.length>450)break;
     }
-    ctx.font='bold 11px system-ui';ctx.fillStyle='#675675';
-    ctx.fillText('TREBLE',15,19);ctx.fillText('BASS',15,147);
-    ctx.font='60px "Apple Symbols","Noto Music","DejaVu Sans",serif';ctx.fillStyle='#4e3b5f';
-    ctx.fillText('𝄞',12,106);
-    ctx.font='49px "Apple Symbols","Noto Music","DejaVu Sans",serif';ctx.fillText('𝄢',18,215);
-    ctx.fillStyle='#f5e2b0';ctx.fillRect(x0-3,25,6,219);
-    ctx.fillStyle='#7a5a27';ctx.font='bold 10px system-ui';ctx.fillText('NOW',x0-17,17);
-
-    const visibleBack=2.2,visibleAhead=(w-x0)/speed+.5;
-    const drawable=[];
-    if(song&&selectedSongNotes.length){
-      const from=lowerBoundSong(selectedSongNotes,at-visibleBack),to=at+visibleAhead;
-      for(let i=Math.max(0,from-15);i<selectedSongNotes.length;i++){
-        const n=selectedSongNotes[i];if(n.start>to)break;
-        if(n.end>=at-visibleBack)drawable.push(n);
-        if(drawable.length>=250)break;
+    if(!visible.length&&lastTouchedNotes.length){
+      for(const midi of lastTouchedNotes){const clef=midi<60?'bass':'treble';const pos=Notation.position(midi,clef,STAFF[clef].bottom,SPACE);
+        visible.push({midi,clef,voice:'1',start:at,x:x0,y:pos.y,steps:pos.steps,bottom:STAFF[clef].bottom,
+          color:'#138668',active:true,accidental:pos.accidental==='sharp'?'♯':pos.accidental==='flat'?'♭':''});
       }
     }
-    // Draw the individual pitch placements; MIDI timing controls only horizontal
-    // spacing. Head collisions in same-time chords receive a small side shift.
-    const occupied=[];
-    for(const note of drawable){
-      const baseX=x0+(note.start-at)*speed;if(baseX<-10||baseX>w+14)continue;
-      const bass=songStaffHand(note)==='bass';const clef=bass?'bass':'treble';
-      const bottom=bass?219:108,top=bass?167:56;
-      const pos=Notation.position(note.midi,clef,bottom,spacing);
-      const active=(note.start<=at&&note.end>at)||stepActive.has(note.midi);
-      const color=active?'#21866f':bass?'#815cc1':'#387eaa';
-      let x=baseX;
-      const adjacent=occupied.find(item=>item.clef===clef&&Math.abs(item.baseX-baseX)<2&&Math.abs(item.steps-pos.steps)===1);
-      if(adjacent)x+=10;
-      occupied.push({clef,baseX,steps:pos.steps});
-      // Do not clamp notes to a wrong staff pitch. For pitches outside the
-      // physical view, show an explicit out-of-range note name instead.
-      if(pos.y<28||pos.y>243){
-        const edge=pos.y<28?28:243;
-        ctx.fillStyle=color;ctx.font='bold 11px system-ui';
-        ctx.fillText((pos.y<28?'↑ ':'↓ ')+pos.name,Math.max(5,Math.min(w-45,x)),edge);
-        continue;
-      }
-      drawLedger(ctx,x,Notation.ledgerLines(pos,bottom,spacing).filter(y=>y>=24&&y<=246));
-      // Avoid illegible overlapping names for multi-note chords; the full
-      // playable chord is listed in the dedicated Live Note readout.
-      const safeLabel=scoreLabels!=='off'&&active&&!drawable.some(other=>other!==note&&
-        Math.abs(other.start-note.start)<.03&&songStaffHand(other)===clef&&Math.abs(other.midi-note.midi)<7);
-      drawNote(ctx,x,pos.y,color,pos,note,safeLabel);
-    }
-    if(!drawable.length&&lastTouchedNotes.length){
-      for(const midi of lastTouchedNotes){
-        const bass=midi<60,bottom=bass?219:108,clef=bass?'bass':'treble';
-        const pos=Notation.position(midi,clef,bottom,spacing);
-        if(pos.y<28||pos.y>243){ctx.fillStyle='#168871';ctx.font='bold 11px system-ui';ctx.fillText((pos.y<28?'↑ ':'↓ ')+pos.name,x0+10,pos.y<28?28:243);continue;}
-        drawLedger(ctx,x0,Notation.ledgerLines(pos,bottom,spacing).filter(y=>y>=24&&y<=246));
-        drawNote(ctx,x0,pos.y,'#168871',pos,{midi},false);
-        ctx.fillStyle='#365b53';ctx.font='bold 10px system-ui';ctx.fillText(midiName(midi),x0+14,pos.y+4);
+    // The large left gutter is permanently reserved for clefs and staff labels.
+    ctx.save();ctx.beginPath();ctx.rect(x0-25,23,width-x0+30,H-28);ctx.clip();
+    for(const chord of ScoreLayout.groupAtOnset(visible)){
+      drawChord(ctx,chord);
+      const active=chord.filter(n=>n.active&&n.y>=29&&n.y<=H-20);
+      if(scoreLabels!=='off'&&active.length===1){const n=active[0];ctx.fillStyle='#1b6451';ctx.font='bold 10px system-ui';
+        ctx.fillText(noteName(n.midi),n.x-8,Math.max(25,n.y-17));
       }
     }
-    if(!drawable.length&&!lastTouchedNotes.length){
-      ctx.fillStyle='#897895';ctx.font='12px system-ui';
-      ctx.fillText('Play a key or start a song to see notes here.',Math.max(65,x0+18),130);
+    if(!visible.length){ctx.fillStyle='#8f799c';ctx.font='12px system-ui';
+      ctx.fillText('Play a key or start a song to see notes.',x0+9,173);
     }
+    ctx.restore();
+    ctx.fillStyle='#f0d7a4bd';ctx.fillRect(x0-3,26,6,H-37);
+    ctx.fillStyle='#775d32';ctx.font='bold 11px system-ui';ctx.fillText('NOW',x0-15,18);
     ctx.restore();
   }
   return Object.freeze({renderSongStaff});
@@ -1126,139 +1199,171 @@ const StaffRenderer = (() => {
 
 /* visual/score-renderer.js */
 
-// Score-aware canvas layout for imported MusicXML; time-based horizontal scroll
-// is deliberately shared with the falling-note/audio clock. This is NOT a full
-// professional engraving system (tuplets, slurs, articulations, voice collision).
+
+// Score-aware MusicXML renderer. The engraved pitches, time signatures, rests,
+// key signatures, accidentals and measure boundaries are preserved. Complex
+// multivoice collision rules, beams and articulation marks still require a
+// dedicated engraving dependency; unsupported constructs are not fabricated.
 const ScoreRenderer = (() => {
-  const top=[56,69,82,95,108],bass=[167,180,193,206,219];
-  const LINE=Notation.STAFF_LINE_SPACING;
-  const cachedTrackSets=new WeakMap();
-  const tracksFor=notes=>{
-    if(!cachedTrackSets.has(notes))cachedTrackSets.set(notes,new Set(notes.map(n=>n.track)));
-    return cachedTrackSets.get(notes);
-  };
-  function firstStartAtOrAfter(events,t){
+  const Y={treble:{top:62,bottom:118},bass:{top:245,bottom:301}},SPACE=14,H=370;
+  const STEPS=['F','C','G','D','A','E','B'],FLATS=['B','E','A','D','G','C','F'];
+  const cache=new WeakMap(),selectedTrackCache=new WeakMap();
+  function tracksFor(notes){if(!selectedTrackCache.has(notes))selectedTrackCache.set(notes,new Set(notes.map(n=>n.track)));return selectedTrackCache.get(notes);}
+  function firstAtX(events,xAt,min){
     let lo=0,hi=events.length;
-    while(lo<hi){const mid=(lo+hi)>>1;if(events[mid].start<t)lo=mid+1;else hi=mid;}
+    while(lo<hi){const mid=(lo+hi)>>1;if(xAt(events[mid].start)<min)lo=mid+1;else hi=mid;}
     return lo;
   }
-  const SHARP_STEPS=['F','C','G','D','A','E','B'],FLAT_STEPS=['B','E','A','D','G','C','F'];
-  function notePos(n) {
-    const bottom=n.clef==='bass'?219:108;
-    const base=n.clef==='bass'?{letter:'G',octave:2}:{letter:'E',octave:4};
-    const i='CDEFGAB'.indexOf(n.step),j='CDEFGAB'.indexOf(base.letter);
-    const steps=(n.octave*7+i)-(base.octave*7+j);
-    return {y:bottom-steps*LINE/2,steps,bottom};
+  const accSymbol={sharp:'♯',flat:'♭',natural:'♮','double-sharp':'𝄪','flat-flat':'𝄫'};
+  function setup(score){
+    let cached=cache.get(score);if(cached)return cached;
+    const times=[0];
+    for(const n of score.notes)times.push(n.start);
+    for(const r of score.rests)times.push(r.start);
+    for(const m of score.measures)times.push(m.start,m.end);
+    // 19px minimum visual spacing improves readability of short events.
+    const axis=ScoreLayout.timeline(times,1/76,36);
+    cached={axis};cache.set(score,cached);return cached;
   }
-  function accidental(n) {
-    const map={sharp:'♯',flat:'♭',natural:'♮','double-sharp':'𝄪','flat-flat':'𝄫'};
-    return map[n.notatedAccidental]||'';
+  function notePos(n){const bottom=Y[n.clef]?.bottom??Y.treble.bottom;return {...ScoreLayout.diatonicPosition(n,bottom,SPACE),bottom};}
+  function drawStaff(ctx,w){
+    ctx.lineWidth=1;ctx.strokeStyle='#9a8da3';
+    for(const staff of [Y.treble,Y.bass])for(let j=0;j<5;j++){
+      const y=staff.top+j*SPACE;
+      ctx.beginPath();ctx.moveTo(8,y);ctx.lineTo(w-8,y);ctx.stroke();
+    }
+    ctx.fillStyle='#51415b';ctx.font='61px "Noto Music","Apple Symbols",serif';ctx.fillText('𝄞',12,116);
+    ctx.font='53px "Noto Music","Apple Symbols",serif';ctx.fillText('𝄢',17,298);
+    ctx.font='bold 10px system-ui';ctx.fillStyle='#65536a';
+    ctx.fillText('TREBLE',13,19);ctx.fillText('BASS',13,205);
   }
-  function drawKeySignature(ctx,fifths){
-    if(!fifths)return;
-    const orders=fifths>0?SHARP_STEPS:FLAT_STEPS;
-    const trebleOct=fifths>0?[5,5,5,5,4,5,4]:[4,5,4,5,4,5,4];
-    const bassOct=fifths>0?[3,3,3,3,2,3,2]:[2,3,2,3,2,3,2];
-    for(let i=0;i<Math.abs(fifths);i++){
-      const name=orders[i],x=48+i*8;
-      for(const [clef,octave] of [['treble',trebleOct[i]],['bass',bassOct[i]]]){
-        const pitch={clef,step:name,octave};const y=notePos(pitch).y;
-        ctx.fillStyle='#574864';ctx.font='bold 18px serif';ctx.fillText(fifths>0?'♯':'♭',x,y+5);
+  function keySig(ctx,signature){
+    if(!signature)return;
+    const steps=signature>0?STEPS:FLATS;
+    const octs=signature>0?{treble:[5,5,5,5,4,5,4],bass:[3,3,3,3,2,3,2]}:
+      {treble:[4,5,4,5,4,5,4],bass:[2,3,2,3,2,3,2]};
+    ctx.font='bold 21px "Noto Music",serif';ctx.fillStyle='#685777';
+    for(let i=0;i<Math.abs(signature);i++){
+      for(const clef of ['treble','bass']){
+        const y=notePos({clef,step:steps[i],octave:octs[clef][i]}).y;
+        ctx.fillText(signature>0?'♯':'♭',53+i*8,y+6);
       }
     }
   }
-  function drawStaff(ctx,w) {
-    for(const lines of [top,bass]){ctx.strokeStyle='#9b8a9f';ctx.lineWidth=1;
-      for(const y of lines){ctx.beginPath();ctx.moveTo(8,y);ctx.lineTo(w-6,y);ctx.stroke();}
+  function ledger(ctx,x,pos){
+    const all=Notation.ledgerLines(pos,pos.bottom,SPACE);
+    ctx.strokeStyle='#76667e';ctx.lineWidth=1.5;
+    for(const y of all){if(y<17||y>H-9)continue;
+      ctx.beginPath();ctx.moveTo(x-13,y);ctx.lineTo(x+14,y);ctx.stroke();
     }
-    ctx.font='60px "Apple Symbols","Noto Music",serif';ctx.fillStyle='#4a3b59';ctx.fillText('𝄞',9,106);
-    ctx.font='49px "Apple Symbols","Noto Music",serif';ctx.fillText('𝄢',15,216);
   }
-  function drawRest(ctx,x,y,duration,color) {
-    ctx.save();ctx.fillStyle=color;ctx.strokeStyle=color;ctx.lineWidth=2.2;
-    if(duration>=4){ctx.fillRect(x-8,y-8,15,5);} // whole rest hangs from line
-    else if(duration>=2){ctx.fillRect(x-8,y-2,15,5);} // half rest rests on line
-    else if(duration>=1){
-      ctx.beginPath();ctx.moveTo(x-4,y-22);ctx.lineTo(x+4,y-13);ctx.lineTo(x-3,y-5);ctx.lineTo(x+4,y+3);
-      ctx.lineTo(x-4,y+13);ctx.lineTo(x+3,y+19);ctx.stroke();
-    } else {
-      ctx.beginPath();ctx.arc(x+3,y-2,3,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.moveTo(x+5,y-3);ctx.lineTo(x-3,y+17);ctx.stroke();
-      if(duration<.5){ctx.beginPath();ctx.arc(x+3,y+6,2.5,0,Math.PI*2);ctx.fill();}
+  function notehead(ctx,x,y,filled,color){
+    ctx.beginPath();ctx.ellipse(x,y,8.1,5.6,-.26,0,2*Math.PI);
+    ctx.fillStyle=filled?color:'#fbf7ed';ctx.strokeStyle=color;ctx.lineWidth=1.8;
+    ctx.fill();ctx.stroke();
+  }
+  function stem(ctx,notes,color){
+    const pivots=notes.filter(n=>n.durationBeats<4);
+    if(!pivots.length)return;
+    const upper=[...pivots].sort((a,b)=>a.y-b.y)[0],lower=[...pivots].sort((a,b)=>b.y-a.y)[0];
+    const center=(upper.y+lower.y)/2,staff=Y[pivots[0].clef];
+    const up=center>staff.top+SPACE*2;
+    const x=pivots[0].x+(up?8:-8);
+    const y0=up?lower.y:upper.y,y1=(up?upper.y-33:lower.y+33);
+    ctx.strokeStyle=color;ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x,y1);ctx.stroke();
+    const d=Math.min(...pivots.map(n=>n.durationBeats));
+    if(d<1){
+      // Unbeamed notes use proper isolated note flags, at most two.
+      ctx.beginPath();ctx.moveTo(x,y1);
+      if(up)ctx.bezierCurveTo(x+15,y1+4,x+18,y1+16,x+8,y1+21);
+      else ctx.bezierCurveTo(x-15,y1-4,x-18,y1-16,x-8,y1-21);
+      ctx.stroke();
+      if(d<.5){const dy=up?7:-7;
+        ctx.beginPath();ctx.moveTo(x,y1+dy);
+        if(up)ctx.bezierCurveTo(x+12,y1+dy+4,x+17,y1+dy+14,x+7,y1+dy+18);
+        else ctx.bezierCurveTo(x-12,y1+dy-4,x-17,y1+dy-14,x-7,y1+dy-18);
+        ctx.stroke();
+      }
     }
+  }
+  function rest(ctx,x,y,duration){
+    ctx.save();ctx.fillStyle='#75618a';ctx.strokeStyle='#75618a';ctx.lineWidth=2;
+    if(duration>=4){ctx.fillRect(x-7,y-14,14,5);}
+    else if(duration>=2){ctx.fillRect(x-7,y-6,14,5);}
+    else if(duration>=1){ctx.beginPath();ctx.moveTo(x-3,y-23);ctx.lineTo(x+5,y-13);ctx.lineTo(x-3,y-4);ctx.lineTo(x+4,y+6);ctx.lineTo(x-3,y+17);ctx.stroke();}
+    else {ctx.beginPath();ctx.arc(x+3,y-2,3,0,7);ctx.fill();ctx.beginPath();ctx.moveTo(x+5,y-2);ctx.lineTo(x-3,y+19);ctx.stroke();
+      if(duration<.5){ctx.beginPath();ctx.arc(x+3,y+6,2.5,0,7);ctx.fill();}}
     ctx.restore();
   }
-  function drawNote(ctx,x,n,color,headOffset=0) {
-    const pos=notePos(n),{y,steps,bottom}=pos;
-    if(y<23||y>246){ctx.font='bold 11px system-ui';ctx.fillStyle=color;
-      ctx.fillText((y<23?'↑ ':'↓ ')+n.step+n.octave,x,y<23?25:245);return;
+  function render({at,score,canvas,notes,stepActive,labels}){
+    if(!score||!canvas||!score.notes)return;
+    const width=Math.max(240,canvas.clientWidth||330),height=canvas.clientHeight||330,dpr=Math.min(2,window.devicePixelRatio||1);
+    if(canvas.width!==Math.round(width*dpr)||canvas.height!==Math.round(height*dpr)){
+      canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
     }
-    const ledger=Notation.ledgerLines(pos,bottom,LINE);
-    ctx.strokeStyle='#7c6984';ctx.lineWidth=1.2;
-    for(const ly of ledger){if(ly<19||ly>252)continue;ctx.beginPath();ctx.moveTo(x-13,ly);ctx.lineTo(x+14,ly);ctx.stroke();}
-    const xx=x+headOffset,whole=n.durationBeats>=4,half=n.durationBeats>=2;
-    ctx.save();ctx.translate(xx,y);ctx.rotate(-.28);
-    ctx.beginPath();ctx.ellipse(0,0,8.4,5.5,0,0,Math.PI*2);
-    ctx.fillStyle=half||whole?'#faf6ed':color;ctx.strokeStyle=color;ctx.lineWidth=1.8;
-    ctx.fill();ctx.stroke();ctx.restore();
-    if(!whole){const up=steps<4,stemX=xx+(up?7:-7),stemEnd=y+(up?-30:30);
-      ctx.strokeStyle=color;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(stemX,y);ctx.lineTo(stemX,stemEnd);ctx.stroke();
-      if(n.durationBeats<1){ // draw eighth/sixteenth hooks; beam grouping remains future engraving work
-        ctx.beginPath();ctx.moveTo(stemX,stemEnd);ctx.bezierCurveTo(stemX+(up?13:-13),stemEnd+6,stemX+(up?11:-11),stemEnd+15,stemX+(up?8:-8),stemEnd+18);ctx.stroke();
-        if(n.durationBeats<.5){ctx.beginPath();ctx.moveTo(stemX,stemEnd+ (up?5:-5));ctx.quadraticCurveTo(stemX+(up?12:-12),stemEnd+9,stemX+(up?8:-8),stemEnd+15);ctx.stroke();}
-      }
-    }
-  }
-  function render({at,score,canvas,notes,stepActive,labels}) {
-    const width=Math.max(250,canvas.clientWidth||330),height=canvas.clientHeight||255,dpr=Math.min(2,window.devicePixelRatio||1);
-    const w=Math.round(width*dpr),h=Math.round(height*dpr);
-    if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
     const ctx=canvas.getContext('2d');if(!ctx)return;
-    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);ctx.fillStyle='#fbf7ed';ctx.fillRect(0,0,width,height);
-    ctx.save();ctx.scale(1,height/255);drawStaff(ctx,width);
-    const x0=Math.min(125,Math.max(98,width*.29)),speed=width<480?66:86;
-    const atMeasure=score.measures.find(m=>m.start<=at&&m.end>at)||score.measures.at(-1);
-    if(atMeasure){
-      drawKeySignature(ctx,atMeasure.keyFifths||0);
-      ctx.fillStyle='#40334b';ctx.font='bold 14px serif';
-      ctx.fillText(String(atMeasure.beats),75,75);ctx.fillText(String(atMeasure.beatType),75,92);
-      ctx.fillText(String(atMeasure.beats),75,185);ctx.fillText(String(atMeasure.beatType),75,202);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,width,height);ctx.fillStyle='#fbf7ed';ctx.fillRect(0,0,width,height);
+    ctx.save();ctx.scale(1,height/H);
+    drawStaff(ctx,width);
+    const {axis}=setup(score);
+    const x0=Math.min(Math.max(139,width*.34),190),offset=x0-axis.at(at);
+    const place=t=>axis.at(t)+offset;
+    const measure=score.measures.find(m=>m.start<=at&&m.end>at)||score.measures.at(-1);
+    if(measure){keySig(ctx,measure.keyFifths||0);
+      ctx.fillStyle='#50435e';ctx.font='bold 14px serif';
+      ctx.fillText(String(measure.beats),97,87);ctx.fillText(String(measure.beatType),97,105);
+      ctx.fillText(String(measure.beats),97,268);ctx.fillText(String(measure.beatType),97,286);
     }
-    ctx.fillStyle='#f0daac';ctx.fillRect(x0-2,20,4,225);
-    ctx.fillStyle='#745b30';ctx.font='bold 10px system-ui';ctx.fillText('NOW',x0-13,16);
-    const visibleStart=at-(x0+25)/speed,visibleEnd=at+(width-x0+25)/speed;
-    const firstMeasure=Math.max(0,firstStartAtOrAfter(score.measures,visibleStart)-1);
-    for(let i=firstMeasure;i<score.measures.length;i++){const m=score.measures[i];if(m.start>visibleEnd)break;if(m.end<visibleStart)continue;
-      const x=x0+(m.start-at)*speed-17;
-      if(x>=30&&x<width){ctx.strokeStyle='#988c8c';ctx.lineWidth=1.2;
-        for(const [t,b] of [[top[0],top[4]],[bass[0],bass[4]]]){ctx.beginPath();ctx.moveTo(x,t);ctx.lineTo(x,b);ctx.stroke();}
-        ctx.fillStyle='#6d6177';ctx.font='bold 10px system-ui';ctx.fillText(String(m.number),x+3,33);
-        // Meter and key changes are shown in the fixed left score gutter,
-        // preventing collisions with noteheads at the measure boundary.
+    const tracks=tracksFor(notes);
+    // Render only visible measures and notes, including a little offscreen space.
+    for(let i=Math.max(0,firstAtX(score.measures,place,x0-40)-1);i<score.measures.length;i++){
+      const m=score.measures[i],x=place(m.start)-6;if(x>width+28)break;
+      ctx.strokeStyle='#b2a7b3';ctx.lineWidth=1;
+      for(const staff of [Y.treble,Y.bass]){
+        ctx.beginPath();ctx.moveTo(x,staff.top);ctx.lineTo(x,staff.bottom);ctx.stroke();
+      }
+      ctx.font='bold 10px system-ui';ctx.fillStyle='#766478';ctx.fillText(String(m.number),x+4,35);
+    }
+    for(let i=firstAtX(score.rests,place,x0-21);i<score.rests.length;i++){
+      const r=score.rests[i],x=place(r.start);if(x>width+12)break;
+      if(!tracks.has(r.track))continue;
+      rest(ctx,x,r.staff==='bass'?Y.bass.top+28:Y.treble.top+28,r.durationBeats);
+    }
+    const visible=[];
+    for(let i=firstAtX(score.notes,place,x0-22);i<score.notes.length;i++){
+      const n=score.notes[i],x=place(n.start);if(x>width+18)break;
+      if(!tracks.has(n.track))continue;
+      const p=notePos(n);const active=(n.start<=at&&n.end>at)||stepActive.has(n.midi);
+      visible.push({...n,x,y:p.y,steps:p.steps,bottom:p.bottom,active,accidental:accSymbol[n.notatedAccidental]||'',color:active?'#0e8267':n.clef==='bass'?'#7854a6':'#347da1'});
+    }
+    // Keep the fixed gutter free of scrolling notes, labels and accidentals.
+    ctx.save();ctx.beginPath();ctx.rect(x0-24,22,width-x0+30,H-26);ctx.clip();
+    for(const chord of ScoreLayout.groupAtOnset(visible)){
+      const offs=ScoreLayout.noteOffsets(chord),acc=ScoreLayout.accidentalOffsets(chord);
+      for(const n of chord){
+        const px=n.x+(offs.get(n)||0),y=n.y;
+        if(y<26||y>H-17){ctx.fillStyle=n.color;ctx.font='bold 11px system-ui';ctx.fillText((y<26?'↑ ':'↓ ')+n.step+n.octave,px,y<26?27:H-15);continue;}
+        ledger(ctx,px,n);
+        if(n.accidental){ctx.font='bold 19px "Noto Music",serif';ctx.fillStyle=n.color;
+          ctx.fillText(n.accidental,px+(acc.get(n)||-21),y+6);
+        }
+        notehead(ctx,px,y,n.durationBeats<2,n.color);
+      }
+      const drawable=chord.filter(n=>n.y>=26&&n.y<=H-17);
+      if(drawable.length)stem(ctx,drawable,drawable.some(n=>n.active)?'#0e8267':drawable[0].color);
+      if(labels!=='off'){
+        const active=drawable.filter(n=>n.active);
+        if(active.length===1){const n=active[0];ctx.font='bold 10px system-ui';ctx.fillStyle='#185e4d';
+          const posY=Math.max(20,n.y-16);ctx.fillText(n.step+(n.alter===1?'♯':n.alter===-1?'♭':'')+n.octave,n.x-8,posY);
+        }
       }
     }
-    const selectedTracks=tracksFor(notes);
-    // Preserve written rests in both hands. Multiple voices can overlap intentionally.
-    for(let i=firstStartAtOrAfter(score.rests,visibleStart);i<score.rests.length;i++){const r=score.rests[i];if(r.start>visibleEnd)break;if(r.end<visibleStart)continue;
-      if(r.track!==undefined&&!selectedTracks.has(r.track))continue;
-      const x=x0+(r.start-at)*speed;if(x<32||x>width-4)continue;
-      drawRest(ctx,x,r.staff==='bass'?195:83,r.durationBeats,'#8a709a');
-    }
-    const occupied=[];
-    for(let i=firstStartAtOrAfter(score.notes,visibleStart);i<score.notes.length;i++){const n=score.notes[i];if(n.start>visibleEnd)break;if(n.end<visibleStart)continue;
-      if(!selectedTracks.has(n.track))continue;
-      const x=x0+(n.start-at)*speed;if(x<21||x>width+20)continue;
-      const active=(n.start<=at&&n.end>at)||stepActive.has(n.midi);
-      const color=active?'#16876b':n.clef==='bass'?'#7355a8':'#347fa1';
-      const p=notePos(n),adj=occupied.find(v=>v.clef===n.clef&&Math.abs(v.start-n.start)<.001&&Math.abs(v.steps-p.steps)===1);
-      occupied.push({clef:n.clef,start:n.start,steps:p.steps});
-      const glyph=accidental(n);
-      if(glyph){ctx.font='bold 18px serif';ctx.fillStyle=color;ctx.fillText(glyph,x-23,p.y+6);}
-      drawNote(ctx,x,n,color,adj?10:0);
-      if(labels!=='off'&&active&&p.y>=25&&p.y<=245){ctx.fillStyle='#174d43';ctx.font='bold 10px system-ui';
-        ctx.fillText(n.step+(n.alter===1?'♯':n.alter===-1?'♭':'')+n.octave,x-10,p.y-14);}
-    }
-    if(!score.notes.length){ctx.font='12px system-ui';ctx.fillText('No notated notes.',x0+15,136);}
+    ctx.restore();
+    // Time cursor is always aligned with playback time, regardless of visual stretching.
+    ctx.fillStyle='#f4d697ba';ctx.fillRect(x0-3,26,6,H-37);
+    ctx.fillStyle='#795f37';ctx.font='bold 11px system-ui';ctx.fillText('NOW',x0-15,18);
     ctx.restore();
   }
   return Object.freeze({render});
@@ -1602,7 +1707,7 @@ function createSongLibrary({$,callbacks}) {
       clone.querySelector('head').append(data);
       const out='<!DOCTYPE html>\n'+clone.outerHTML;
       const blob=new Blob([out],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.13_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
+      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.13.1_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
       setTimeout(()=>URL.revokeObjectURL(url),15000);
       $('songLibraryStatus').textContent='✓ Exported private HTML with '+Object.keys(merged).length+' embedded MIDI song(s). Keep it private; the iPhone Files preview may not run interactive HTML.';
     }catch(e){$('songLibraryStatus').textContent='Could not create private song copy: '+(e.message||'export failed');}
@@ -1679,7 +1784,7 @@ function createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,getContext
     lastTouchedNotes=notes.filter(n=>Number.isFinite(n)&&n>=21&&n<=108).slice(-10);
     const names=lastTouchedNotes.map(midiName);
     $('liveNoteName').textContent=names.length?names.join(' + '):'—';
-    $('liveNoteDetail').innerHTML=lastTouchedNotes.length?(lastTouchedNotes.length>1?'<b>Chord / multiple notes</b>':'<b>'+ (lastTouchedNotes[0]===60?'Middle C · ':'')+'Note played</b>')+' · '+lastTouchedNotes.map(n=>midiSharp(n)?midiName(n).replace('#','♯')+' / '+NOTES[(n+1)%12]+'♭'+Math.floor(n/12-1):midiName(n)).join(' · '):'Press any piano key to identify it.';
+    $('liveNoteDetail').innerHTML=lastTouchedNotes.length?(lastTouchedNotes.length>1?'<b>Last touched chord</b>':'<b>'+ (lastTouchedNotes[0]===60?'Middle C · ':'')+'Last key touched</b>')+' · '+lastTouchedNotes.map(n=>midiSharp(n)?midiName(n).replace('#','♯')+' / '+NOTES[(n+1)%12]+'♭'+Math.floor(n/12-1):midiName(n)).join(' · '):'Press any piano key to identify it.';
     renderSongStaff(getContext().songPosition);
   }
   function songStaffHand(note){return Notation.assignStaff(note,getContext().song?.tracks||[]);}

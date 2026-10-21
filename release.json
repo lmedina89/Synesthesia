@@ -1,12 +1,12 @@
 {
-  "version": "0.13.0",
-  "kind": "musicxml-ESM-notated-score",
-  "module_count": 21,
+  "version": "0.13.1",
+  "kind": "notation-layout-correction",
+  "module_count": 22,
   "sha256": {
-    "index.html": "459ebff4a908980c9184f29b18c401b0eabd4cfd1641a593ab2da97544748894",
-    "standalone.html": "883099d155efb812f9e47c6925a29d84779406e5b1576781476780e20d12699f",
+    "index.html": "61e013220e4109fef38f22d4bcdf2886fdd92620c9277fc83e61f0fb8371b05b",
+    "standalone.html": "8456707a02a3209d0eaa61343417d5c5b197541676ed0ec372b1423fd6439a87",
     "assets/app.js": "ba751fda46467cc2d92c03a146de87b67e98912d27ad51fb530eba5345e805bc",
-    "assets/styles.css": "4c5439659bce84e88a5bb10ec01edd90f37ab9a535e49fb0f551979e233eef37"
+    "assets/styles.css": "7c94b38d33f28d51725568c2c91ee66013e16dd5c478c722025a89689dca8283"
   },
   "third_party_midi_bundled": false
 }

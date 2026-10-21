@@ -1,113 +1,116 @@
 import {Theory} from '../core/theory.js';
 import {Notation} from '../core/notation.js';
-// Scrolling *pitch-accurate* piano staff. Screen rendering is distinct from the
-// pure Notation model, making note positions/ledger lines verifiable in tests.
-// MIDI cannot retain reliable key signatures, beaming, rests, or staff assignment.
+import {ScoreLayout} from '../core/score-layout.js';
+// MIDI-only pitch guide: never fabricates key signatures, rests, barlines or
+// written rhythmic values that do not exist in the MIDI file. Keeps exact
+// pitch positions and playback times, expanding only *visual* event spacing.
 export const StaffRenderer = (() => {
-  const {midiName,lowerBoundSong}=Theory;
-  const spacing=Notation.STAFF_LINE_SPACING;
-  const staffTop=[56,69,82,95,108],staffBass=[167,180,193,206,219];
-  const page='#fbf7ed';
-
-  function drawLedger(ctx,x,ys){
-    ctx.strokeStyle='#73657f';ctx.lineWidth=1.3;
-    for(const y of ys){ctx.beginPath();ctx.moveTo(x-12,y);ctx.lineTo(x+13,y);ctx.stroke();}
+  const H=370,SPACE=14,STAFF={treble:{top:62,bottom:118},bass:{top:245,bottom:301}};
+  const cache=new WeakMap();
+  const noteName=Theory.midiName;
+  function timeAxis(notes){
+    if(!cache.has(notes))cache.set(notes,ScoreLayout.timeline(notes.map(n=>n.start),1/76,42));
+    return cache.get(notes);
   }
-  function drawNote(ctx,x,y,color,pos,now,showName){
-    const up=Notation.stemDirection(pos)==='up';
-    ctx.fillStyle=color;ctx.strokeStyle=color;ctx.lineWidth=1.7;
-    ctx.beginPath();ctx.ellipse(x,y,8.2,5.5,-.28,0,Math.PI*2);ctx.fill();
-    // Stems have conventional directions. Rhythmic symbols are deliberately
-    // omitted until a quantized meter/beat model can accurately supply them.
-    ctx.beginPath();
-    if(up){ctx.moveTo(x+7.2,y);ctx.lineTo(x+7.2,y-27);}
-    else{ctx.moveTo(x-7.2,y);ctx.lineTo(x-7.2,y+27);}
-    ctx.stroke();
-    if(pos.accidental){
-      ctx.font='bold 19px serif';ctx.fillText(pos.accidental==='flat'?'♭':'♯',x-22,y+6);
+  function line(ctx,x,y0,x1,y1){ctx.beginPath();ctx.moveTo(x,y0);ctx.lineTo(x1,y1);ctx.stroke();}
+  function drawBase(ctx,w){
+    ctx.lineWidth=1;ctx.strokeStyle='#9b8ca3';
+    for(const s of [STAFF.treble,STAFF.bass])for(let j=0;j<5;j++)line(ctx,9,s.top+j*SPACE,w-9,s.top+j*SPACE);
+    ctx.font='60px "Apple Symbols","Noto Music",serif';ctx.fillStyle='#4e3b60';ctx.fillText('𝄞',12,115);
+    ctx.font='53px "Apple Symbols","Noto Music",serif';ctx.fillText('𝄢',17,298);
+    ctx.font='bold 10px system-ui';ctx.fillStyle='#655470';ctx.fillText('TREBLE',13,19);ctx.fillText('BASS',13,207);
+  }
+  function drawLedger(ctx,x,pos){
+    ctx.strokeStyle='#84768d';ctx.lineWidth=1.5;
+    for(const y of Notation.ledgerLines(pos,pos.bottom,SPACE)){
+      if(y<16||y>H-7)continue;
+      line(ctx,x-13,y,x+13,y);
     }
-    if(showName){
-      ctx.font='bold 10px system-ui';ctx.fillStyle='#145741';
-      ctx.fillText(midiName(now.midi),x-10,y-14);
+  }
+  function notehead(ctx,x,y,color){
+    ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x,y,8.2,5.6,-.26,0,Math.PI*2);ctx.fill();
+  }
+  function drawChord(ctx,chord){
+    const colors=chord.some(n=>n.active)?'#138668':chord[0].clef==='bass'?'#7858af':'#347fa1';
+    const offsets=ScoreLayout.noteOffsets(chord);
+    const accidents=ScoreLayout.accidentalOffsets(chord);
+    for(const n of chord){
+      const x=n.x+(offsets.get(n)||0),y=n.y;
+      if(y<26||y>H-18){ctx.fillStyle=n.color;ctx.font='bold 11px system-ui';
+        ctx.fillText((y<26?'↑ ':'↓ ')+noteName(n.midi),x,y<26?27:H-18);continue;
+      }
+      drawLedger(ctx,x,n);
+      if(n.accidental){ctx.font='bold 20px "Noto Music",serif';ctx.fillStyle=n.color;
+        ctx.fillText(n.accidental,x+(accidents.get(n)||-21),y+6);
+      }
+      notehead(ctx,x,y,n.color);
+    }
+    const drawable=chord.filter(n=>n.y>=26&&n.y<=H-18);
+    if(drawable.length){
+      const ordered=[...drawable].sort((a,b)=>a.y-b.y);
+      const top=ordered[0],bottom=ordered.at(-1);
+      const direction=(top.y+bottom.y)/2>(STAFF[top.clef].top+2*SPACE)?1:-1;
+      const start=direction>0?bottom:top,end=direction>0?top:bottom;
+      ctx.strokeStyle=colors;ctx.lineWidth=1.7;
+      const x=start.x+(direction>0?8:-8);
+      line(ctx,x,start.y,x,end.y+(direction>0?-31:31));
     }
   }
   function renderSongStaff({at,scoreCanvas,scoreContainer,song,selectedSongNotes,lastTouchedNotes,scoreLabels,stepActive,songStaffHand}){
     if(scoreContainer.hidden)return;
-    const cssWidth=Math.max(250,scoreCanvas.clientWidth||330),cssHeight=scoreCanvas.clientHeight||255;
-    const scale=Math.min(2,window.devicePixelRatio||1);
-    const devW=Math.round(cssWidth*scale),devH=Math.round(cssHeight*scale);
-    if(scoreCanvas.width!==devW||scoreCanvas.height!==devH){scoreCanvas.width=devW;scoreCanvas.height=devH;}
+    const width=Math.max(250,scoreCanvas.clientWidth||330),height=scoreCanvas.clientHeight||340,dpr=Math.min(2,window.devicePixelRatio||1);
+    if(scoreCanvas.width!==Math.round(width*dpr)||scoreCanvas.height!==Math.round(height*dpr)){
+      scoreCanvas.width=Math.round(width*dpr);scoreCanvas.height=Math.round(height*dpr);
+    }
     const ctx=scoreCanvas.getContext('2d');if(!ctx)return;
-    ctx.setTransform(scale,0,0,scale,0,0);
-    const w=cssWidth,h=cssHeight,factor=h/255;
-    ctx.clearRect(0,0,w,h);ctx.fillStyle=page;ctx.fillRect(0,0,w,h);
-    ctx.save();ctx.scale(1,factor);
-    const x0=Math.min(112,Math.max(92,w*.29));const speed=w<480?70:90;
-    for(const ys of [staffTop,staffBass]){
-      ctx.strokeStyle='#8f819a';ctx.lineWidth=1;
-      for(const y of ys){ctx.beginPath();ctx.moveTo(12,y);ctx.lineTo(w-10,y);ctx.stroke();}
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,width,height);ctx.fillStyle='#fbf7ed';ctx.fillRect(0,0,width,height);
+    ctx.save();ctx.scale(1,height/H);drawBase(ctx,width);
+    const x0=Math.min(Math.max(139,width*.34),190);
+    const axis=timeAxis(selectedSongNotes),offset=x0-axis.at(at);
+    const xAt=t=>axis.at(t)+offset;
+    const visible=[];
+    // Binary-search at the viewport edge rather than traversing the entire song.
+    const times=axis.times;
+    const minX=x0-27,maxX=width+28;
+    let lower=0,upper=times.length;
+    while(lower<upper){const mid=(lower+upper)>>1;if(xAt(times[mid])<minX)lower=mid+1;else upper=mid;}
+    // Earlier sustained notes are also considered, bounded to the last 200 notes.
+    const approxTime=times[Math.max(0,lower-1)]||0;
+    const start=Theory.lowerBoundSong(selectedSongNotes,approxTime);
+    for(let i=Math.max(0,start-200);i<selectedSongNotes.length;i++){
+      const n=selectedSongNotes[i],x=xAt(n.start);
+      if(x>maxX)break;
+      if(x<minX||n.end<at-3)continue;
+      const clef=songStaffHand(n)==='bass'?'bass':'treble';
+      const pos=Notation.position(n.midi,clef,STAFF[clef].bottom,SPACE);
+      const active=(n.start<=at&&n.end>at)||stepActive.has(n.midi);
+      visible.push({...n,clef,voice:'1',x,y:pos.y,steps:pos.steps,bottom:STAFF[clef].bottom,active,
+        color:active?'#11836b':clef==='bass'?'#7b5bae':'#397fa6',
+        accidental:pos.accidental==='sharp'?'♯':pos.accidental==='flat'?'♭':''});
+      if(visible.length>450)break;
     }
-    ctx.font='bold 11px system-ui';ctx.fillStyle='#675675';
-    ctx.fillText('TREBLE',15,19);ctx.fillText('BASS',15,147);
-    ctx.font='60px "Apple Symbols","Noto Music","DejaVu Sans",serif';ctx.fillStyle='#4e3b5f';
-    ctx.fillText('𝄞',12,106);
-    ctx.font='49px "Apple Symbols","Noto Music","DejaVu Sans",serif';ctx.fillText('𝄢',18,215);
-    ctx.fillStyle='#f5e2b0';ctx.fillRect(x0-3,25,6,219);
-    ctx.fillStyle='#7a5a27';ctx.font='bold 10px system-ui';ctx.fillText('NOW',x0-17,17);
-
-    const visibleBack=2.2,visibleAhead=(w-x0)/speed+.5;
-    const drawable=[];
-    if(song&&selectedSongNotes.length){
-      const from=lowerBoundSong(selectedSongNotes,at-visibleBack),to=at+visibleAhead;
-      for(let i=Math.max(0,from-15);i<selectedSongNotes.length;i++){
-        const n=selectedSongNotes[i];if(n.start>to)break;
-        if(n.end>=at-visibleBack)drawable.push(n);
-        if(drawable.length>=250)break;
+    if(!visible.length&&lastTouchedNotes.length){
+      for(const midi of lastTouchedNotes){const clef=midi<60?'bass':'treble';const pos=Notation.position(midi,clef,STAFF[clef].bottom,SPACE);
+        visible.push({midi,clef,voice:'1',start:at,x:x0,y:pos.y,steps:pos.steps,bottom:STAFF[clef].bottom,
+          color:'#138668',active:true,accidental:pos.accidental==='sharp'?'♯':pos.accidental==='flat'?'♭':''});
       }
     }
-    // Draw the individual pitch placements; MIDI timing controls only horizontal
-    // spacing. Head collisions in same-time chords receive a small side shift.
-    const occupied=[];
-    for(const note of drawable){
-      const baseX=x0+(note.start-at)*speed;if(baseX<-10||baseX>w+14)continue;
-      const bass=songStaffHand(note)==='bass';const clef=bass?'bass':'treble';
-      const bottom=bass?219:108,top=bass?167:56;
-      const pos=Notation.position(note.midi,clef,bottom,spacing);
-      const active=(note.start<=at&&note.end>at)||stepActive.has(note.midi);
-      const color=active?'#21866f':bass?'#815cc1':'#387eaa';
-      let x=baseX;
-      const adjacent=occupied.find(item=>item.clef===clef&&Math.abs(item.baseX-baseX)<2&&Math.abs(item.steps-pos.steps)===1);
-      if(adjacent)x+=10;
-      occupied.push({clef,baseX,steps:pos.steps});
-      // Do not clamp notes to a wrong staff pitch. For pitches outside the
-      // physical view, show an explicit out-of-range note name instead.
-      if(pos.y<28||pos.y>243){
-        const edge=pos.y<28?28:243;
-        ctx.fillStyle=color;ctx.font='bold 11px system-ui';
-        ctx.fillText((pos.y<28?'↑ ':'↓ ')+pos.name,Math.max(5,Math.min(w-45,x)),edge);
-        continue;
-      }
-      drawLedger(ctx,x,Notation.ledgerLines(pos,bottom,spacing).filter(y=>y>=24&&y<=246));
-      // Avoid illegible overlapping names for multi-note chords; the full
-      // playable chord is listed in the dedicated Live Note readout.
-      const safeLabel=scoreLabels!=='off'&&active&&!drawable.some(other=>other!==note&&
-        Math.abs(other.start-note.start)<.03&&songStaffHand(other)===clef&&Math.abs(other.midi-note.midi)<7);
-      drawNote(ctx,x,pos.y,color,pos,note,safeLabel);
-    }
-    if(!drawable.length&&lastTouchedNotes.length){
-      for(const midi of lastTouchedNotes){
-        const bass=midi<60,bottom=bass?219:108,clef=bass?'bass':'treble';
-        const pos=Notation.position(midi,clef,bottom,spacing);
-        if(pos.y<28||pos.y>243){ctx.fillStyle='#168871';ctx.font='bold 11px system-ui';ctx.fillText((pos.y<28?'↑ ':'↓ ')+pos.name,x0+10,pos.y<28?28:243);continue;}
-        drawLedger(ctx,x0,Notation.ledgerLines(pos,bottom,spacing).filter(y=>y>=24&&y<=246));
-        drawNote(ctx,x0,pos.y,'#168871',pos,{midi},false);
-        ctx.fillStyle='#365b53';ctx.font='bold 10px system-ui';ctx.fillText(midiName(midi),x0+14,pos.y+4);
+    // The large left gutter is permanently reserved for clefs and staff labels.
+    ctx.save();ctx.beginPath();ctx.rect(x0-25,23,width-x0+30,H-28);ctx.clip();
+    for(const chord of ScoreLayout.groupAtOnset(visible)){
+      drawChord(ctx,chord);
+      const active=chord.filter(n=>n.active&&n.y>=29&&n.y<=H-20);
+      if(scoreLabels!=='off'&&active.length===1){const n=active[0];ctx.fillStyle='#1b6451';ctx.font='bold 10px system-ui';
+        ctx.fillText(noteName(n.midi),n.x-8,Math.max(25,n.y-17));
       }
     }
-    if(!drawable.length&&!lastTouchedNotes.length){
-      ctx.fillStyle='#897895';ctx.font='12px system-ui';
-      ctx.fillText('Play a key or start a song to see notes here.',Math.max(65,x0+18),130);
+    if(!visible.length){ctx.fillStyle='#8f799c';ctx.font='12px system-ui';
+      ctx.fillText('Play a key or start a song to see notes.',x0+9,173);
     }
+    ctx.restore();
+    ctx.fillStyle='#f0d7a4bd';ctx.fillRect(x0-3,26,6,H-37);
+    ctx.fillStyle='#775d32';ctx.font='bold 11px system-ui';ctx.fillText('NOW',x0-15,18);
     ctx.restore();
   }
   return Object.freeze({renderSongStaff});
