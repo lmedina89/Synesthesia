@@ -246,7 +246,7 @@
     }
     @media(max-width:400px){.focus-toolbar strong{font-size:11px}.focus-toolbar button{min-width:36px;padding:6px 8px}.focus-zoom-readout{font-size:10px}}
 
-/* v0.13.2 — VexFlow SVG engraving, pinned CDN script, canvas fallback */
+/* v0.13.3 — VexFlow SVG engraving, pinned CDN script, canvas fallback */
 .engraved-score{width:100%;height:337px;overflow:hidden;position:relative;background:#fbf7ed;contain:layout paint;}
 .engraved-score[hidden],.score-canvas[hidden]{display:none!important;}
 .engraved-stage{height:337px;position:absolute;top:0;left:0;will-change:transform;pointer-events:none;}
@@ -348,7 +348,7 @@
     <div class="song-feedback" id="songFeedback" aria-live="polite">Ready. Press Play to see keys light up.</div>
     <p class="song-help">Supports uncompressed partwise MusicXML (.musicxml, .xml) and standard MIDI with note data, including most piano MIDI downloads. MIDI is not an MP3 or YouTube link: audio recordings don't contain reliable individual key information. Songs with many instruments may be easier to learn by selecting a single track. The kalimba above still works; notes in its range can light up during playback too.</p>
   </section>
-  <p class="footer">v0.13.2 · VexFlow engraving integration and inferred-MIDI score labeling · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
+  <p class="footer">v0.13.3 · VexFlow engraving integration and inferred-MIDI score labeling · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
 </main>
 <div class="audio-recovery" id="audioRecovery" role="status" aria-live="polite" hidden><span id="audioRecoveryMessage">iPhone paused the piano audio. Tap to restore it.</span><button id="audioRestore" type="button">♫ Restore sound</button></div>
   <script defer src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js" id="vexflow-loader"></script>
@@ -1090,46 +1090,71 @@ const ScoreLayout = (() => {
 
 /* core/engraving-model.js */
 
-// Pure, bounded MusicXML/MIDI-to-staff preparation. All rendering is delegated to VexFlow.
-// MIDI does not contain a reliable sheet-music voice/staff/clef, and is explicitly inferred.
-const EngravingModel = (()=>{
-  const intervals=[{n:16,d:'w'},{n:12,d:'hd'},{n:8,d:'h'},{n:6,d:'qd'},{n:4,d:'q'},{n:3,d:'8d'},{n:2,d:'8'},{n:1,d:'16'}];
-  function durations(count){let rem=Math.min(64,Math.max(0,count)),out=[];for(const x of intervals){while(rem>=x.n){out.push(x.d);rem-=x.n;}}return out;}
-  function durationFor(count){return intervals.find(x=>x.n===count)?.d||'16';}
+// Side-effect-free score preparation. MusicXML notation is retained where supported.
+// MIDI engraving is an explicitly quantized INTERPRETATION; playback data is untouched.
+// Important: refuse unsupported rhythmic/voice layouts rather than losing noteheads.
+const EngravingModel = (() => {
+  const UNITS=[
+    {units:16,duration:'w',dots:0},{units:12,duration:'h',dots:1},
+    {units:8,duration:'h',dots:0},{units:6,duration:'q',dots:1},
+    {units:4,duration:'q',dots:0},{units:3,duration:'8',dots:1},
+    {units:2,duration:'8',dots:0},{units:1,duration:'16',dots:0}
+  ];
+  const EPS=1e-5, MAX_VOICES=4, MAX_TICKS=160;
+  const unsupported=message=>{throw new Error('Notation unavailable for this passage: '+message);};
+  function durations(units){
+    if(!Number.isSafeInteger(units)||units<0||units>1024)unsupported('invalid rhythmic length');
+    const result=[];let remaining=units;
+    for(const x of UNITS){while(remaining>=x.units){result.push(x.dots?x.duration+'d':x.duration);remaining-=x.units;}}
+    return result;
+  }
+  // Never substitute a sixteenth note for an unrecognized note length.
+  function durationFor(units){return UNITS.find(x=>x.units===units)?.duration??null;}
+  function splitDuration(units){
+    if(!Number.isSafeInteger(units)||units<1||units>1024)unsupported('invalid note duration');
+    let remaining=units;const pieces=[];
+    for(const x of UNITS)while(remaining>=x.units){pieces.push({...x});remaining-=x.units;}
+    return pieces;
+  }
+  function quantize(beat,inferred){
+    if(!Number.isFinite(beat))unsupported('non-finite timing');
+    const tick=Math.round(beat*4);
+    if(Math.abs(tick/4-beat)>(inferred?.125:0.0002))unsupported('unsupported rhythmic subdivision (e.g. triplet)');
+    return tick;
+  }
   function notationKey(n){
     if(n.step&&Number.isInteger(n.octave))return `${n.step.toLowerCase()}${n.alter>0?'#'.repeat(n.alter):n.alter<0?'b'.repeat(-n.alter):''}/${n.octave}`;
     const p=Notation.spelling(n.midi);return `${p.letter.toLowerCase()}${p.accidental==='sharp'?'#':''}/${p.octave}`;
   }
-  function noteSpelling(n){return `${n.step||Notation.spelling(n.midi).letter}${n.alter===1?'#':n.alter===-1?'b':''}${n.octave??Notation.spelling(n.midi).octave}`;}
+  function noteSpelling(n){const p=(!n.step||!Number.isInteger(n.octave))?Notation.spelling(n.midi):null;return `${n.step||p.letter}${n.alter===1?'#':n.alter===-1?'b':''}${n.octave??p.octave}`;}
   function forSong(song,selectedNotes){
     if(!song)return null;
     if(song.score?.type==='MusicXML'){
       const tracks=new Set(selectedNotes.map(n=>n.track));
-      return {source:'MusicXML',inferred:false,measures:song.score.measures,notes:song.score.notes.filter(n=>tracks.has(n.track)),rests:song.score.rests.filter(n=>tracks.has(n.track))};
+      return {source:'MusicXML',inferred:false,measures:song.score.measures,
+        notes:song.score.notes.filter(n=>tracks.has(n.track)).map((n,i)=>({...n,_scoreId:i,
+          _tieId:(n.tieStart||n.tieStop)?`xml:${n.track}:${n.voice}:${n.midi}`:`xml:${i}`})),
+        rests:song.score.rests.filter(n=>tracks.has(n.track))};
     }
-    // Exact MIDI tick positions (startBeat/endBeat) are retained during MIDI parsing.
-    // 4/4 meter is only a visual assumption, never presented as original notation.
     const used=selectedNotes;
     const maxBeat=Math.max(4,...used.map(n=>n.endBeat??n.end*2));
-    const count=Math.min(1024,Math.max(1,Math.ceil(maxBeat/4)));
-    const measures=Array.from({length:count},(_,i)=>({index:i,number:String(i+1),startBeat:i*4,endBeat:(i+1)*4,beats:4,beatType:4,
-      start:0,end:0,keyFifths:0}));
-    const notes=used.map(n=>{
-      const staff=Notation.assignStaff(n,song.tracks);
-      const p=Notation.spelling(n.midi);
-      const startBeat=n.startBeat??n.start*2,endBeat=n.endBeat??n.end*2;
-      return {...n,startBeat,endBeat,durationBeats:Math.max(.25,endBeat-startBeat),clef:staff,voice:'1',measure:Math.min(count-1,Math.floor(startBeat/4)),
-        step:p.letter,octave:p.octave,alter:p.accidental==='sharp'?1:0,notatedAccidental:p.accidental||''};
+    const count=Math.max(1,Math.ceil(maxBeat/4));
+    if(count>1024)unsupported('song is too long for the inferred 4/4 score');
+    const measures=Array.from({length:count},(_,i)=>({index:i,number:String(i+1),startBeat:i*4,endBeat:(i+1)*4,beats:4,beatType:4,keyFifths:0}));
+    const notes=used.map((n,i)=>{
+      const staff=Notation.assignStaff(n,song.tracks),p=Notation.spelling(n.midi);
+      return {...n,startBeat:n.startBeat??n.start*2,endBeat:n.endBeat??n.end*2,
+        clef:staff,voice:'1',measure:Math.min(count-1,Math.floor((n.startBeat??n.start*2)/4)),
+        step:p.letter,octave:p.octave,alter:p.accidental==='sharp'?1:0,notatedAccidental:'',_scoreId:i};
     });
     return {source:'MIDI',inferred:true,measures,notes,rests:[]};
   }
   function measureIndex(model,at){
     if(!model)return 0;
     if(model.inferred){
-      let lo=0,hi=model.notes.length;
-      // Notes generally sorted chronologically; use the nearest active/preceding note.
-      while(lo<hi){const mid=(lo+hi)>>1;if(model.notes[mid].start<=at)lo=mid+1;else hi=mid;}
-      const n=model.notes[Math.max(0,lo-1)];return Math.min(model.measures.length-1,Math.floor((n?.startBeat??0)/4));
+      const notes=model.notes;let lo=0,hi=notes.length;
+      while(lo<hi){const mid=(lo+hi)>>1;if(notes[mid].start<=at)lo=mid+1;else hi=mid;}
+      return Math.max(0,Math.min(model.measures.length-1,Math.floor((notes[Math.max(0,lo-1)]?.startBeat??0)/4)));
     }
     let lo=0,hi=model.measures.length;
     while(lo<hi){const mid=(lo+hi)>>1;if(model.measures[mid].end<=at)lo=mid+1;else hi=mid;}
@@ -1137,173 +1162,231 @@ const EngravingModel = (()=>{
   }
   function staffVoices(model,measure,clef){
     const from=measure.startBeat,to=measure.endBeat;
-    const all=model.notes.filter(n=>n.clef===clef&&n.startBeat>=from-0.001&&n.startBeat<to-0.001&&n.endBeat>from);
-    const rests=model.inferred?[]:model.rests.filter(n=>n.staff===clef&&n.startBeat>=from-0.001&&n.startBeat<to-0.001);
-    const grouped=new Map();
-    for(const n of all){let voice=model.inferred?'1':n.voice||'1';if(!grouped.has(voice))grouped.set(voice,[]);
-      grouped.get(voice).push({kind:'note',at:n.startBeat,until:n.endBeat,entry:n});}
-    for(const r of rests){let voice=r.voice||'1';if(!grouped.has(voice))grouped.set(voice,[]);
-      grouped.get(voice).push({kind:'rest',at:r.startBeat,until:r.endBeat,entry:r});}
-    if(!grouped.size)grouped.set('1',[]);
-    let voices=[];
-    for(const [voice,events] of [...grouped].slice(0,4)){
-      events.sort((a,b)=>a.at-b.at||a.kind.localeCompare(b.kind));
-      const buckets=[];
-      for(const e of events){let g=buckets.at(-1);if(g&&e.kind==='note'&&g.kind==='note'&&Math.abs(g.at-e.at)<0.015){g.entries.push(e.entry);g.until=Math.min(g.until,e.until);}else buckets.push({kind:e.kind,at:e.at,until:e.until,entries:[e.entry]});}
-      const ticks=[];let cursor=0,maxTicks=Math.round((to-from)*4);
-      for(let i=0;i<buckets.length&&ticks.length<60;i++){
-        const b=buckets[i],begin=Math.max(0,Math.round((b.at-from)*4));
-        if(begin<cursor)continue;
-        for(const d of durations(begin-cursor))ticks.push({kind:'rest',duration:d,hidden:model.inferred});
-        const end=Math.min(maxTicks,Math.max(begin+1,Math.round((b.until-from)*4)));
-        let len=end-begin;
-        if(model.inferred&&i<buckets.length-1)len=Math.min(len,Math.max(1,Math.round((buckets[i+1].at-b.at)*4)));
-        const duration=durationFor(len);
-        ticks.push({kind:b.kind,duration,entries:b.entries,time:b.entries[0]?.start,keys:b.kind==='note'?b.entries.map(notationKey):[],
-          names:b.kind==='note'?b.entries.map(noteSpelling):[]});
-        cursor=begin+len;
-      }
-      for(const d of durations(maxTicks-cursor))ticks.push({kind:'rest',duration:d,hidden:model.inferred});
-      voices.push({voice,ticks:ticks.slice(0,70)});
+    const startTick=quantize(from,false),endTick=quantize(to,false),maxTicks=endTick-startTick;
+    if(maxTicks<1||maxTicks>256)unsupported('unsupported measure duration');
+    const raw=[];
+    for(const n of model.notes){
+      if(n.clef!==clef||n.endBeat<=from+EPS||n.startBeat>=to-EPS)continue;
+      const a=Math.max(startTick,quantize(n.startBeat,model.inferred));
+      const b=Math.min(endTick,quantize(n.endBeat,model.inferred));
+      if(b<=a)unsupported('note too short for sixteenth-note notation');
+      raw.push({kind:'note',start:a,end:b,n,voice:String(n.voice||'1'),track:n.track??0});
     }
-    return voices;
+    if(!model.inferred)for(const r of model.rests){
+      if(r.staff!==clef||r.endBeat<=from+EPS||r.startBeat>=to-EPS)continue;
+      const a=Math.max(startTick,quantize(r.startBeat,false)),b=Math.min(endTick,quantize(r.endBeat,false));
+      if(b>a)raw.push({kind:'rest',start:a,end:b,n:r,voice:String(r.voice||'1'),track:r.track??0});
+    }
+    // Group true chords only when notes have identical onset, offset, voice and track.
+    const groups=new Map();
+    for(const e of raw){
+      const key=[e.kind,e.start,e.end,e.voice,e.track].join(':');
+      if(!groups.has(key))groups.set(key,{kind:e.kind,start:e.start,end:e.end,
+        voice:e.voice,track:e.track,entries:[]});
+      groups.get(key).entries.push(e.n);
+    }
+    const events=[...groups.values()].sort((a,b)=>a.start-b.start||a.end-b.end||a.voice.localeCompare(b.voice));
+    // Allocate overlapping lines to independent voices. No silent 'continue' or slice().
+    const lanes=[];
+    for(const e of events){
+      let lane=lanes.find(l=>l.voice===e.voice&&l.track===e.track&&l.end<=e.start);
+      if(!lane){lane={voice:e.voice,track:e.track,end:startTick,events:[]};lanes.push(lane);}
+      lane.events.push(e);lane.end=e.end;
+    }
+    if(lanes.length>MAX_VOICES)unsupported(`${lanes.length} overlapping voices (limit ${MAX_VOICES})`);
+    if(!lanes.length)lanes.push({voice:'1',track:0,end:startTick,events:[]});
+    const output=[];
+    for(const lane of lanes){
+      let cursor=startTick;const ticks=[];
+      const addRest=(len,hidden)=>{for(const d of durations(len)){
+        const dotted=d.endsWith('d');ticks.push({kind:'rest',duration:dotted?d.slice(0,-1):d,dots:dotted?1:0,hidden});
+      }};
+      for(const e of lane.events){
+        if(e.start<cursor)unsupported('overlapping events in a notation voice');
+        addRest(e.start-cursor,model.inferred);
+        const pieces=splitDuration(e.end-e.start);
+        for(let i=0;i<pieces.length;i++){
+          const p=pieces[i];
+          const note=e.kind==='note';
+          ticks.push({kind:e.kind,duration:p.duration,dots:p.dots,entries:e.entries,
+            keys:note?e.entries.map(notationKey):[],names:note?e.entries.map(noteSpelling):[],
+            accidentals:note?e.entries.map(n=>n.notatedAccidental||''):[],
+            // Assign every source note its stable tie identifier; preserve ties from MusicXML.
+            tieIds:note?e.entries.map(n=>String(n._tieId??n._scoreId)):[],
+            tieIn:note?e.entries.map(n=>i>0||e.start>quantize(n.startBeat,model.inferred)||!!n.tieStop):[],
+            tieOut:note?e.entries.map(n=>i<pieces.length-1||e.end<quantize(n.endBeat,model.inferred)||!!n.tieStart):[],
+            time:note&&i===0?e.entries[0]?.start:null});
+        }
+        cursor=e.end;
+      }
+      addRest(endTick-cursor,model.inferred);
+      if(ticks.length>MAX_TICKS)unsupported('too many rhythmic symbols in one voice');
+      output.push({voice:lane.voice,track:lane.track,ticks});
+    }
+    const headCount=output.flatMap(v=>v.ticks).reduce((sum,t)=>sum+(t.kind==='note'?t.keys.length:0),0);
+    const expected=raw.filter(e=>e.kind==='note').length;
+    if(headCount<expected)unsupported('note preservation check failed');
+    return output;
   }
-  return Object.freeze({forSong,measureIndex,staffVoices,notationKey,noteSpelling,durations,durationFor});
+  return Object.freeze({forSong,measureIndex,staffVoices,notationKey,noteSpelling,durations,durationFor,splitDuration});
 })();
 
 
 /* visual/vexflow-renderer.js */
 
-// Progressive-enhancement score engraver. VexFlow is loaded from a pinned
-// external script. When unavailable the existing canvas pitch guide remains.
-// Render only a small moving score window and move its playback cursor cheaply.
+// Optional SVG engraver. Never claim reliable engraving after a rejected measure.
+// VexFlow 4.2.2 is pinned but *not* bundled: fallback is intentionally available.
 const VexflowRenderer = (() => {
   const windows=new WeakMap();
   const KEYS=['C','G','D','A','E','B','F#','C#'];
   const FLATS=['C','F','Bb','Eb','Ab','Db','Gb','Cb'];
-  const MEASURE_W=362, STAFF_Y={treble:42,bass:183}, H=337;
+  const MEASURE_W=430, STAFF_Y={treble:42,bass:196}, H=360;
+  let lastFailure='';
   function vf(){return globalThis.Vex?.Flow || globalThis.VexFlow?.Flow || globalThis.VexFlow || null;}
   function modelFor(record,song,notes){
     if(record.song!==song||record.notes!==notes){record.song=song;record.notes=notes;record.model=EngravingModel.forSong(song,notes);record.windowStart=-1;}
     return record.model;
   }
   function elementFor(canvas){
-    const parent=canvas.parentNode;
-    let frame=parent.querySelector('.engraved-score');
-    if(!frame){frame=document.createElement('div');frame.className='engraved-score';frame.setAttribute('role','img');frame.setAttribute('aria-label','Piano score engraved with VexFlow');
+    const parent=canvas.parentNode;let frame=parent.querySelector('.engraved-score');
+    if(!frame){frame=document.createElement('div');frame.className='engraved-score';
+      frame.setAttribute('role','img');frame.setAttribute('aria-label','Piano score engraved with VexFlow');
       const stage=document.createElement('div');stage.className='engraved-stage';frame.append(stage);
       const now=document.createElement('div');now.className='engraved-playhead';now.setAttribute('aria-hidden','true');frame.append(now);
       parent.insertBefore(frame,canvas);
     }
     return frame;
   }
-  function ticksFor(VF,items,clef,paint,anchors){
+  const accSymbols={sharp:'#',flat:'b',natural:'n','double-sharp':'##','flat-flat':'bb',
+    'sharp-sharp':'##','double-flat':'bb'};
+  function ticksFor(VF,items,clef,paint,anchors,tieEdges,accState){
     return items.map(e=>{
+      let note;
       if(e.kind==='rest'){
-        if(e.hidden&&VF.GhostNote) return new VF.GhostNote(e.duration);
-        return new VF.StaveNote({clef,keys:[clef==='bass'?'d/3':'b/4'],duration:e.duration+'r'});
+        if(e.hidden&&VF.GhostNote){note=new VF.GhostNote(e.duration);}
+        else note=new VF.StaveNote({clef,keys:[clef==='bass'?'d/3':'b/4'],duration:e.duration+'r'});
+      }else{
+        note=new VF.StaveNote({clef,keys:e.keys,duration:e.duration});
+        for(let k=0;k<e.keys.length;k++){
+          const pitch=e.keys[k].split('/')[0];
+          const step=pitch[0].toUpperCase(),octave=e.keys[k].split('/')[1];
+          const altered=pitch.includes('##')?2:pitch.includes('bb')?-2:pitch.includes('#')?1:pitch.includes('b')?-1:0;
+          const key=step+octave;const explicit=accSymbols[e.accidentals?.[k]];
+          const prev=accState.get(key)??0;
+          const symbol=explicit??(prev===altered?null:altered===0?'n':altered===1?'#':altered===-1?'b':altered===2?'##':'bb');
+          if(symbol){note.addModifier(new VF.Accidental(symbol),k);}
+          accState.set(key,altered);
+          const tieId=e.tieIds?.[k];
+          if(tieId!==undefined)tieEdges.push({id:tieId,note,index:k,tieIn:!!e.tieIn?.[k],tieOut:!!e.tieOut?.[k]});
+        }
+        if(typeof note.setStyle==='function')note.setStyle({fillStyle:paint,strokeStyle:paint});
+        if(Number.isFinite(e.time))anchors.push({note,time:e.time});
       }
-      const note=new VF.StaveNote({clef,keys:e.keys,duration:e.duration});
-      for(let k=0;k<e.keys.length;k++){
-        const spelling=e.keys[k].split('/')[0];
-        const symbol=spelling.includes('#')?'#':spelling.includes('b')?'b':null;
-        if(symbol){try{note.addModifier(new VF.Accidental(symbol),k);}catch(_){/* unsupported double alteration */}}
+      if(e.dots){
+        if(typeof note.addDotToAll!=='function')throw new Error('VexFlow dotted-note API not available');
+        for(let j=0;j<e.dots;j++)note.addDotToAll();
       }
-      if(typeof note.setStyle==='function')note.setStyle({fillStyle:paint,strokeStyle:paint});
-      if(Number.isFinite(e.time))anchors.push({note,time:e.time});
       return note;
     });
   }
-  function renderMeasure(VF,context,model,m,x,isFirst,anchors){
-    const width=MEASURE_W;
-    let successfullyDrawn=0;
-    for(const clef of ['treble','bass']){
-      const stave=new VF.Stave(x,STAFF_Y[clef],width);
-      if(isFirst){stave.addClef(clef);
-        if(!model.inferred){
-          const signature=m.keyFifths||0;
-          if(signature)stave.addKeySignature(signature>0?KEYS[Math.min(7,signature)]:FLATS[Math.min(7,-signature)]);
-          stave.addTimeSignature(`${m.beats}/${m.beatType}`);
-        }
+  function drawTies(VF,context,edges){
+    if(!VF.StaveTie&&edges.some(e=>e.tieIn||e.tieOut))throw new Error('VexFlow tie rendering is unavailable');
+    if(!VF.StaveTie)return;
+    const pending=new Map();
+    for(const e of edges){
+      if(e.tieIn&&pending.has(e.id)){
+        const p=pending.get(e.id);
+        new VF.StaveTie({first_note:p.note,last_note:e.note,first_indices:[p.index],last_indices:[e.index]}).setContext(context).draw();
       }
-      stave.setContext(context).draw();
-      const voices=[];
-      for(const v of EngravingModel.staffVoices(model,m,clef)){
-        const voice=new VF.Voice({num_beats:m.beats,beat_value:m.beatType});voice.setStrict(false);
-        const tickables=ticksFor(VF,v.ticks,clef,clef==='bass'?'#7455a6':'#31799a',anchors);
-        voice.addTickables(tickables);voices.push(voice);
-      }
-      try{
-        const formatter=new VF.Formatter();formatter.joinVoices(voices);
-        formatter.format(voices,Math.max(130,stave.getNoteEndX()-stave.getNoteStartX()-16));
-        for(const voice of voices){voice.draw(context,stave);successfullyDrawn+=voice.tickables?.length??1;}
-      }catch(err){
-        // One malformed imported voice must not take down the app.
-        // Log the notation issue; the reliable falling-note practice remains usable.
-        console.warn('Cannot engrave measure '+m.number+' '+clef,err);
-      }
+      if(e.tieOut)pending.set(e.id,e);else pending.delete(e.id);
     }
-    context.setFont('Arial',10,'normal');
-    context.fillText(`${m.number}`,x+8,22);
-    return successfullyDrawn;
+  }
+  function renderMeasure(VF,context,model,m,x,isFirst,anchors,tieEdges){
+    let heads=0;
+    for(const clef of ['treble','bass']){
+      const stave=new VF.Stave(x,STAFF_Y[clef],MEASURE_W);
+      if(isFirst){stave.addClef(clef);if(!model.inferred){
+        const signature=m.keyFifths||0;
+        if(signature)stave.addKeySignature(signature>0?KEYS[Math.min(7,signature)]:FLATS[Math.min(7,-signature)]);
+        stave.addTimeSignature(`${m.beats}/${m.beatType}`);
+      }}
+      stave.setContext(context).draw();
+      const voices=[],accState=new Map();
+      const fifths=m.keyFifths||0;
+      const steps=fifths>0?['F','C','G','D','A','E','B']:['B','E','A','D','G','C','F'];
+      const alterations=new Map(steps.slice(0,Math.abs(fifths)).map(step=>[step,Math.sign(fifths)]));
+      const prepared=EngravingModel.staffVoices(model,m,clef);
+      for(const v of prepared){
+        const voice=new VF.Voice({num_beats:m.beats,beat_value:m.beatType});voice.setStrict(false);
+        // Key signature applies independently to every octave of the note letter.
+        const state=new Map(accState);
+        for(const e of v.ticks)for(const k of e.keys||[]){const [sp,oct]=k.split('/');const key=sp[0].toUpperCase()+oct;
+          if(!state.has(key))state.set(key,alterations.get(sp[0].toUpperCase())??0);
+        }
+        const ticks=ticksFor(VF,v.ticks,clef,clef==='bass'?'#7455a6':'#31799a',anchors,tieEdges,state);
+        voice.addTickables(ticks);voices.push(voice);
+        heads+=v.ticks.reduce((s,t)=>s+(t.kind==='note'?t.keys.length:0),0);
+      }
+      const formatter=new VF.Formatter();formatter.joinVoices(voices);
+      formatter.format(voices,Math.max(130,stave.getNoteEndX()-stave.getNoteStartX()-16));
+      for(const voice of voices)voice.draw(context,stave);
+    }
+    context.setFont('Arial',10,'normal');context.fillText(`${m.number}`,x+8,22);
+    return heads;
   }
   function mapAnchors(anchors){
     const result=anchors.filter(a=>Number.isFinite(a.time)&&Number.isFinite(a.note?.getAbsoluteX?.()))
       .map(a=>({time:a.time,x:a.note.getAbsoluteX()})).sort((a,b)=>a.time-b.time||a.x-b.x);
-    // At any onset, a chord gets one cursor position.
     return result.filter((a,i)=>i===0||Math.abs(a.time-result[i-1].time)>.001);
   }
   function xAt(anchors,at,width){
     if(!anchors.length)return Math.min(190,width/2);
-    let lo=0,hi=anchors.length;
-    while(lo<hi){const mid=(lo+hi)>>1;if(anchors[mid].time<at)lo=mid+1;else hi=mid;}
-    if(lo===0)return anchors[0].x;
-    if(lo>=anchors.length)return anchors.at(-1).x;
+    let lo=0,hi=anchors.length;while(lo<hi){const mid=(lo+hi)>>1;if(anchors[mid].time<at)lo=mid+1;else hi=mid;}
+    if(lo===0)return anchors[0].x;if(lo>=anchors.length)return anchors.at(-1).x;
     const a=anchors[lo-1],b=anchors[lo],t=Math.min(1,Math.max(0,(at-a.time)/Math.max(.001,b.time-a.time)));
     return a.x+(b.x-a.x)*t;
   }
   function render({song,notes,at,canvas}){
-    const VF=vf();
-    if(!VF?.Renderer||!VF?.Stave||!VF?.StaveNote||!VF?.Formatter||!VF?.Voice||!song||!notes?.length)return false;
+    const VF=vf();lastFailure='';
+    if(!VF?.Renderer||!VF?.Stave||!VF?.StaveNote||!VF?.Formatter||!VF?.Voice){lastFailure='VexFlow script is unavailable';return false;}
+    if(!song||!notes?.length)return false;
     const frame=elementFor(canvas);
     let state=windows.get(frame);
     if(!state){state={song:null,notes:null,windowStart:-1,anchors:[],model:null};windows.set(frame,state);}
-    const model=modelFor(state,song,notes);
-    if(!model?.measures?.length)return false;
-    const index=EngravingModel.measureIndex(model,at);
-    // Keep the active measure plus one preceding and two upcoming measures.
-    const start=Math.max(0,index-1),end=Math.min(model.measures.length,start+4);
-    if(state.windowStart!==start){
-      state.windowStart=start;
-      const stage=frame.firstElementChild;stage.replaceChildren();
-      const width=(end-start)*MEASURE_W+16;
-      try{
-        const renderer=new VF.Renderer(stage,VF.Renderer.Backends.SVG);
-        renderer.resize(width,H);
-        const context=renderer.getContext();const anchors=[];
-        let engraved=0;
-        for(let j=start;j<end;j++)engraved+=renderMeasure(VF,context,model,model.measures[j],(j-start)*MEASURE_W+7,j===start,anchors);
-        if(!engraved&&model.notes.length)throw new Error('No valid voices in score window');
-        state.anchors=mapAnchors(anchors);
-        state.width=width;
-        stage.style.width=width+'px';
-      }catch(error){
-        console.warn('VexFlow engraving unavailable; retaining pitch guide.',error);
-        stage.replaceChildren();state.windowStart=-1;return false;
+    try{
+      const model=modelFor(state,song,notes);
+      if(!model?.measures?.length)return false;
+      const index=EngravingModel.measureIndex(model,at);
+      const start=Math.max(0,index-1),end=Math.min(model.measures.length,start+4);
+      if(state.windowStart!==start){
+        const stage=frame.firstElementChild;stage.replaceChildren();
+        const width=(end-start)*MEASURE_W+16;
+        try{
+          const renderer=new VF.Renderer(stage,VF.Renderer.Backends.SVG);
+          renderer.resize(width,H);
+          const context=renderer.getContext(),anchors=[],ties=[];
+          let engraved=0;
+          for(let j=start;j<end;j++)engraved+=renderMeasure(VF,context,model,model.measures[j],(j-start)*MEASURE_W+7,j===start,anchors,ties);
+          if(!engraved&&model.notes.length)throw new Error('No valid notes in this score window');
+          drawTies(VF,context,ties);
+          state.anchors=mapAnchors(anchors);state.width=width;
+          stage.style.width=width+'px';state.windowStart=start;
+        }catch(err){stage.replaceChildren();state.windowStart=-1;throw err;}
       }
+      const playingX=xAt(state.anchors,at,state.width),playhead=frame.clientWidth*.34;
+      frame.firstElementChild.style.transform=`translate3d(${Math.round(playhead-playingX)}px,0,0)`;
+      frame.lastElementChild.style.left=playhead+'px';frame.hidden=false;canvas.hidden=true;
+      frame.dataset.source=model.inferred?'midi-inferred':'musicxml';return true;
+    }catch(error){
+      state.song=null;state.notes=null;state.model=null;state.windowStart=-1;
+      lastFailure=error?.message||'unknown engraving failure';
+      console.warn('Score engraving rejected; showing pitch guide:',lastFailure);
+      const frame=canvas.parentNode?.querySelector('.engraved-score');if(frame)frame.hidden=true;
+      return false;
     }
-    // The noteheads are actually formatted by VexFlow; use their x locations
-    // as playback anchors rather than pretending pixels equal milliseconds.
-    const playingX=xAt(state.anchors,at,state.width);
-    const playhead=frame.clientWidth*.34;
-    frame.firstElementChild.style.transform=`translate3d(${Math.round(playhead-playingX)}px,0,0)`;
-    frame.lastElementChild.style.left=playhead+'px';
-    frame.hidden=false;canvas.hidden=true;
-    frame.dataset.source=model.inferred?'midi-inferred':'musicxml';
-    return true;
   }
   function reset(canvas){const frame=canvas?.parentNode?.querySelector('.engraved-score');if(frame){frame.hidden=true;canvas.hidden=false;}}
-  return Object.freeze({render,reset});
+  return Object.freeze({render,reset,getLastFailure:()=>lastFailure});
 })();
 
 
@@ -2028,7 +2111,7 @@ function createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,getContext
       return;
     }
     VexflowRenderer.reset(scoreCanvas);
-    $('scoreRenderStatus').textContent='Pitch guide fallback · VexFlow unavailable (internet required)';
+    $('scoreRenderStatus').textContent='Pitch guide fallback · '+(VexflowRenderer.getLastFailure()||'VexFlow unavailable')+' · MusicXML/MIDI playback unchanged';
     if(song?.score?.type==='MusicXML'){
       ScoreRenderer.render({at,score:song.score,canvas:scoreCanvas,notes:selectedSongNotes,stepActive,labels:scoreLabels});
     }else{

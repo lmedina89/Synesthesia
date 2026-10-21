@@ -1,12 +1,12 @@
 {
-  "version": "0.13.2",
-  "kind": "vexflow-engraving-integration",
+  "version": "0.13.3",
+  "kind": "notation-stabilization-candidate",
   "module_count": 24,
   "sha256": {
-    "index.html": "aabde0d1b9c6aaea52551e25d568d774809e4ef4420ed13d99b3c943d856f3d2",
-    "standalone.html": "dc159827b9853b02a2b904be9f5dc92568d1097f0ced02aaaab05321ba0d0245",
+    "index.html": "77aec5047f28c13d1d67f04d48965f3b3e667e7bf81cf283f743a63c2884312f",
+    "standalone.html": "4bd81580ce65e0e091e6392a58fc3b8d734205839a11263047de479222c56f2b",
     "assets/app.js": "ba751fda46467cc2d92c03a146de87b67e98912d27ad51fb530eba5345e805bc",
-    "assets/styles.css": "bb1a806de14010b9c03f54d1258a05edbaba1283da99f59bd1486a6225ceb476"
+    "assets/styles.css": "0d0a313a5ad32ee4b721281eb18f693766038af768d11bcbf059e057fe4178aa"
   },
   "third_party_midi_bundled": false
 }

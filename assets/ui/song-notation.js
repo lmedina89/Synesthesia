@@ -37,7 +37,7 @@ export function createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,get
       return;
     }
     VexflowRenderer.reset(scoreCanvas);
-    $('scoreRenderStatus').textContent='Pitch guide fallback · VexFlow unavailable (internet required)';
+    $('scoreRenderStatus').textContent='Pitch guide fallback · '+(VexflowRenderer.getLastFailure()||'VexFlow unavailable')+' · MusicXML/MIDI playback unchanged';
     if(song?.score?.type==='MusicXML'){
       ScoreRenderer.render({at,score:song.score,canvas:scoreCanvas,notes:selectedSongNotes,stepActive,labels:scoreLabels});
     }else{
