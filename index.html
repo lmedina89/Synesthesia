@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#100f22" />
-  <meta name="description" content="Learn piano using a scrolling music staff, live note names, a glowing keyboard, and imported MIDI music. Includes kalimba and grand-piano sounds." />
-  <title>Garden Notes v0.6 — Scrolling Staff & Song Pack</title>
+  <meta name="description" content="Practice piano with an immersive full-screen studio, responsive iPhone audio recovery, scrolling sheet music and glowing keys. Includes kalimba." />
+  <title>Garden Notes v0.7 — Immersive Piano Practice</title>
   <style>
     :root { color-scheme: dark; --bg:#100f22; --panel:#1a1932; --panel2:#211f3c; --line:#393454; --ink:#f6f1ff; --muted:#b0a9cd; --lav:#b9a4ff; --gold:#f3c992; --good:#91dfbf; --bad:#ff9bac; --white:#fffaf2; }
     * { box-sizing:border-box; }
@@ -201,6 +201,50 @@
     @media(max-width:400px){.score{padding:9px 13px}.score-value{font-size:21px}.segmented button{padding:9px 11px}.instrument-controls{gap:9px}.tine-row{gap:2px}.kalimba-stage{padding-left:4px;padding-right:4px}.trainer{padding:16px}.mode-tabs button{font-size:10px;padding:8px 7px;}.kalimba-note-grid{gap:4px}.kalimba-note-grid button{font-size:10px}}
     @media(max-width:360px){.lower{grid-template-columns:minmax(0,1fr)}.lower>*{min-width:0}.mode-tabs{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.mode-tabs button{padding:9px 5px;}}
     @media(prefers-reduced-motion:reduce){*{transition:none!important;}}
+
+    /* v0.7 focus mode: a viewport-filling practice surface even on iPhone Safari,
+       where Element.requestFullscreen is not consistently supported. */
+    .focus-toolbar{display:none;align-items:center;gap:7px;color:#e9dfff;min-height:43px;}
+    .focus-toolbar strong{font-size:13px;flex:1;white-space:nowrap;}
+    .focus-toolbar button{border:1px solid #66587e;background:#322b4e;color:#f9f0ff;border-radius:9px;min-width:40px;min-height:39px;padding:7px 10px;font-size:13px;font-weight:800;white-space:nowrap;}
+    .focus-toolbar .focus-exit{background:#cfb0ff;color:#221a33;border:0;}
+    .focus-zoom-readout{font-size:11px;color:#e9d4ae;white-space:nowrap;}
+    .focus-launch{white-space:nowrap;}
+    .song-scroll-scale{width:1508px;position:relative;}
+    .audio-recovery{position:fixed;z-index:1200;left:50%;transform:translateX(-50%);bottom:max(22px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px;width:min(95vw,430px);padding:12px;border:1px solid #ac8ee6;border-radius:14px;background:#282043;color:#faf4ff;box-shadow:0 8px 40px #000b;font-size:12px;line-height:1.4;}
+    .audio-recovery button{flex:none;min-height:43px;border:0;border-radius:9px;background:#c6a9ff;color:#22152f;font-weight:850;font-size:12px;padding:10px 12px;}
+    body.focus-active{overflow:hidden!important;overscroll-behavior:none;}
+    #songStudio.practice-focus{position:fixed;z-index:1000;inset:0;inset:0 0 env(safe-area-inset-bottom) 0;max-width:none;margin:0!important;padding:calc(env(safe-area-inset-top) + 6px) 8px 7px;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto minmax(100px,.83fr) minmax(180px,1.35fr) auto;gap:6px;border:0;border-radius:0;background:#151427;box-shadow:none;overflow:hidden;height:100vh;height:100dvh;}
+    #songStudio.practice-focus > :not(.focus-toolbar):not(.song-now):not(.score-frame):not(.song-scroll):not(.song-feedback):not(.live-readout){display:none!important;}
+    #songStudio.practice-focus .focus-toolbar{display:flex;}
+    #songStudio.practice-focus .song-now{display:flex;padding:1px 4px;font-size:12px;min-height:21px;flex-wrap:nowrap;}
+    #songStudio.practice-focus .song-now strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    #songStudio.practice-focus .live-readout{display:flex;min-height:42px;margin:0;padding:4px 10px;flex-wrap:nowrap;overflow:hidden;}
+    #songStudio.practice-focus .live-name{font-size:20px;min-width:52px;}
+    #songStudio.practice-focus .live-notes{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px;}
+    #songStudio.practice-focus .score-frame{display:flex;flex-direction:column;margin:0;min-height:0;}
+    #songStudio.practice-focus .score-topline{padding:6px 9px;flex:none;}
+    #songStudio.practice-focus .score-topline strong{font-size:11px;}
+    #songStudio.practice-focus .score-help{display:none;}
+    #songStudio.practice-focus .score-canvas{width:100%;height:100%;min-height:0;flex:1;touch-action:none;}
+    #songStudio.practice-focus .score-footer{display:none;}
+    #songStudio.practice-focus .song-scroll{margin:0;max-width:100%;height:100%;min-height:0;border-radius:12px;touch-action:pan-x;overflow-x:auto;overflow-y:hidden;}
+    #songStudio.practice-focus .song-scroll-scale{height:100%;}
+    #songStudio.practice-focus .song-scroll-inner{height:100%;transform-origin:0 0;}
+    #songStudio.practice-focus #songRoll{height:48%;border-bottom-width:3px;}
+    #songStudio.practice-focus #songKeys{height:52%;}
+    #songStudio.practice-focus .song-white{height:100%;}
+    #songStudio.practice-focus .song-black{height:62%;}
+    #songStudio.practice-focus .song-feedback{margin:0;min-height:23px;max-height:40px;overflow:hidden;padding:3px 4px;font-size:12px;line-height:1.35;}
+    @media(orientation:landscape) and (max-height:560px){
+      #songStudio.practice-focus{grid-template-columns:minmax(0,35%) minmax(0,65%);grid-template-rows:auto minmax(0,1fr) auto;padding-top:calc(env(safe-area-inset-top) + 3px);}
+      #songStudio.practice-focus .focus-toolbar{grid-column:1/-1;grid-row:1;}
+      #songStudio.practice-focus .song-now,#songStudio.practice-focus .live-readout{display:none!important;}
+      #songStudio.practice-focus .score-frame{grid-column:1;grid-row:2;}
+      #songStudio.practice-focus .song-scroll{grid-column:2;grid-row:2;}
+      #songStudio.practice-focus .song-feedback{grid-column:1/-1;grid-row:3;}
+    }
+    @media(max-width:400px){.focus-toolbar strong{font-size:11px}.focus-toolbar button{min-width:36px;padding:6px 8px}.focus-zoom-readout{font-size:10px}}
   </style>
 </head>
 <body>
@@ -272,8 +316,11 @@
       <label>Practice part<select id="songTrack"><option value="all">All notes</option></select></label>
       <label class="song-speed">Speed <strong id="songSpeedText">75%</strong><input type="range" id="songSpeed" min="25" max="125" step="5" value="75" aria-label="Song playback speed" /></label>
     </div>
-    <div class="song-buttons"><button class="primary" id="songPlay" type="button">▶ Play song</button><button class="secondary" id="songReset" type="button">↺ Start over</button><button class="secondary" id="songCenter" type="button">◎ Find glowing keys</button></div>
+    <div class="song-buttons"><button class="primary" id="songPlay" type="button">▶ Play song</button><button class="secondary focus-launch" id="songFocus" type="button">⛶ Full-screen practice</button><button class="secondary" id="songReset" type="button">↺ Start over</button><button class="secondary" id="songCenter" type="button">◎ Find glowing keys</button></div>
     <input class="song-progress" id="songProgress" type="range" min="0" max="1000" step="1" value="0" aria-label="Song position" />
+    <div class="focus-toolbar" id="focusToolbar" aria-label="Immersive practice controls">
+      <strong>🎹 Practice</strong><button id="focusZoomOut" type="button" aria-label="Make piano keys smaller">−</button><span id="focusZoomLabel" class="focus-zoom-readout">170%</span><button id="focusZoomIn" type="button" aria-label="Make piano keys larger">＋</button><button id="focusPlay" type="button">Ⅱ Pause</button><button id="focusExit" class="focus-exit" type="button">✕ Exit</button>
+    </div>
     <div class="song-now"><strong id="songTitle">Twinkle Twinkle Little Star</strong><span id="songTime">0:00 / 0:00</span></div>
     <div class="score-settings">
       <label for="songKeyNames">Key names <select id="songKeyNames" aria-label="Note labels on song keyboard"><option value="pressed">Show when played</option><option value="all">Show every key</option><option value="off">Hide key labels</option></select></label>
@@ -285,13 +332,14 @@
       <canvas id="songStaffCanvas" class="score-canvas" aria-label="Treble and bass musical staff showing the current notes and upcoming song notes" role="img"></canvas>
       <div class="score-footer">Notes scroll toward the gold playhead. Shows pitches and approximate note lengths from MIDI, not a publisher-engraved score.</div>
     </div>
-    <div class="song-scroll" id="songScroll" tabindex="0" aria-label="Scroll horizontally to see all 88 piano keys"><div class="song-scroll-inner"><canvas id="songRoll" width="1508" height="176" aria-label="Upcoming notes falling toward the piano keys"></canvas><div id="songKeys" aria-label="Full 88-key playable song keyboard"></div></div></div>
+    <div class="song-scroll" id="songScroll" tabindex="0" aria-label="Scroll horizontally to see all 88 piano keys"><div class="song-scroll-scale" id="songScrollScale"><div class="song-scroll-inner" id="songScrollInner"><canvas id="songRoll" width="1508" height="176" aria-label="Upcoming notes falling toward the piano keys"></canvas><div id="songKeys" aria-label="Full 88-key playable song keyboard"></div></div></div></div>
     <div class="song-legend"><span>🟡 <b>Gold</b> = playing</span><span>🟢 <b>Green</b> = your next notes</span><span>🟣 <b>Purple</b> = notes you finished</span></div>
     <div class="song-feedback" id="songFeedback" aria-live="polite">Ready. Press Play to see keys light up.</div>
     <p class="song-help">Supports standard MIDI files with note data, including most piano MIDI downloads. MIDI is not an MP3 or YouTube link: audio recordings don't contain reliable individual key information. Songs with many instruments may be easier to learn by selecting a single track. The kalimba above still works; notes in its range can light up during playback too.</p>
   </section>
-  <p class="footer">v0.6 · Scrolling staff and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
+  <p class="footer">v0.7 · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
 </main>
+<div class="audio-recovery" id="audioRecovery" role="status" aria-live="polite" hidden><span id="audioRecoveryMessage">iPhone paused the piano audio. Tap to restore it.</span><button id="audioRestore" type="button">♫ Restore sound</button></div>
 <script>
 'use strict';
 (function(){
@@ -309,6 +357,7 @@
   state.octave = Math.max(2,Math.min(6,Number(state.octave)||4));
   state.clef = state.clef==='bass'?'bass':'treble';
   let audioCtx = null;
+  let audioHasStarted=false, audioRecoverySerial=0;
   let currentPool = [];
   let nextTimer = null;
   function persist(){try{localStorage.setItem('garden-notes-v1', JSON.stringify({instrument:state.instrument,octave:state.octave,showLabels:state.showLabels,sound:state.sound,correct:state.correct,best:state.best,clef:state.clef}));}catch(e){}}
@@ -354,12 +403,51 @@
   const sampleBuffers=new Map(), sampleRequests=new Map();
   let sampleFailCount=0;
   function audioContext(){
-    if(!audioCtx){const AudioCtor=window.AudioContext||window.webkitAudioContext;if(!AudioCtor)throw Error('Web Audio not supported');audioCtx=new AudioCtor();}
+    if(!audioCtx||audioCtx.state==='closed'){const AudioCtor=window.AudioContext||window.webkitAudioContext;if(!AudioCtor)throw Error('Web Audio not supported');audioCtx=new AudioCtor();audioCtx.addEventListener?.('statechange',()=>{if(audioHasStarted&&!document.hidden)syncAudioGate();});}
     return audioCtx;
   }
-  function resumeAudio(){
-    try{const ctx=audioContext();if(ctx.state==='suspended')ctx.resume().catch(()=>{});return ctx;}catch(e){return null;}
+  // Safari can suspend or interrupt WebAudio when leaving the app. Never claim
+  // it is restored until the context really reports "running".
+  function syncAudioGate(message){
+    const gate=$('audioRecovery');if(!gate)return;
+    gate.hidden=!state.sound||!audioHasStarted||document.hidden||!audioCtx||audioCtx.state==='running';
+    if(message&&!gate.hidden)$('audioRecoveryMessage').textContent=message;
   }
+  function resumeAudio(){
+    try{const ctx=audioContext();audioHasStarted=true;
+      if(ctx.state!=='running')ctx.resume().then(()=>syncAudioGate()).catch(()=>syncAudioGate('Audio was paused. Tap Restore sound to continue.'));
+      return ctx;
+    }catch(e){syncAudioGate('Audio unavailable in this browser.');return null;}
+  }
+  async function ensureAudioReady(){
+    if(!state.sound)return true;
+    const ctx=resumeAudio();if(!ctx)return false;
+    try{if(ctx.state!=='running')await ctx.resume();}catch(e){}
+    syncAudioGate('Safari paused the piano. Tap Restore sound to keep playing.');
+    return ctx.state==='running';
+  }
+  async function restoreAudio(){
+    audioHasStarted=true;const ok=await ensureAudioReady();
+    if(ok){$('audioRecovery').hidden=true;try{playNote('C4');}catch(e){} }
+    else syncAudioGate('Tap Restore sound again if Safari is still unlocking audio.');
+    return ok;
+  }
+  let recoveryCheck=0;
+  function wakeAudioAfterReturn(){
+    if(!state.sound||!audioHasStarted||document.hidden)return;
+    ++audioRecoverySerial;
+    resumeAudio();
+    clearTimeout(recoveryCheck);
+    recoveryCheck=setTimeout(()=>syncAudioGate('Safari paused piano audio in the background. Tap Restore sound.'),350);
+  }
+  $('audioRestore').addEventListener('click',restoreAudio);
+  window.addEventListener('pageshow',wakeAudioAfterReturn);
+  window.addEventListener('focus',wakeAudioAfterReturn);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)wakeAudioAfterReturn();else $('audioRecovery').hidden=true;});
+  // If the user taps a real control, Safari permits reactivation in that gesture.
+  document.addEventListener('pointerdown',()=>{
+    if(audioHasStarted&&state.sound&&audioCtx?.state!=='running')resumeAudio();
+  },{capture:true,passive:true});
   function closestSample(midi){
     let nearest=SAMPLE_NOTES[0],dist=Infinity;
     for(const name of SAMPLE_NOTES){const diff=Math.abs(noteMidi(name)-midi);if(diff<dist){nearest=name;dist=diff;}}
@@ -871,7 +959,45 @@
     $('songPlay').textContent=stepping?'▶ Start note practice':songPlaying?'Ⅱ Pause song':'▶ Play song';
     if(stepping&&songPlaying)$('songPlay').textContent='Ⅱ Pause practice';
     $('songPlay').disabled=!song;
+    $('focusPlay').textContent=songPlaying?'Ⅱ Pause':'▶ Play';
+    $('focusPlay').disabled=!song;
   }
+  let focusActive=false,focusZoom=1.70,focusPreviousScroll=0;
+  function syncFocusZoom(){
+    const factor=focusActive?focusZoom:1;
+    $('songScrollScale').style.width=(1508*factor)+'px';
+    $('songScrollInner').style.transform=focusActive?'scaleX('+focusZoom+')':'';
+    $('focusZoomLabel').textContent=Math.round(focusZoom*100)+'%';
+  }
+  function enterFocus(){
+    if(focusActive)return;
+    focusPreviousScroll=songUi.scroll.scrollLeft;
+    focusActive=true;document.body.classList.add('focus-active');
+    $('songStudio').classList.add('practice-focus');
+    if(!$('songStaffVisible').checked){$('songStaffVisible').checked=true;$('songStaffPanel').hidden=false;}
+    syncFocusZoom();
+    const midis=songPlaying&&$('songMode').value==='step'?(songGroups[songGroupIndex]?.midis||[]):[selectedSongNotes.find(n=>n.start>=songPosition)?.midi??60];
+    focusSongKeys(midis,true);renderSongStaff(songPosition);
+  }
+  function exitFocus(){
+    if(!focusActive)return;
+    focusActive=false;document.body.classList.remove('focus-active');
+    $('songStudio').classList.remove('practice-focus');syncFocusZoom();
+    songUi.scroll.scrollLeft=focusPreviousScroll;
+    renderSongStaff(songPosition);
+  }
+  $('songFocus').addEventListener('click',()=>focusActive?exitFocus():enterFocus());
+  $('focusExit').addEventListener('click',exitFocus);
+  $('focusPlay').addEventListener('click',playSong);
+  for(const [id,step] of [['focusZoomOut',-.25],['focusZoomIn',.25]]){
+    $(id).addEventListener('click',()=>{
+      const before=focusZoom;focusZoom=Math.max(1.20,Math.min(2.45,Math.round((focusZoom+step)*100)/100));
+      if(focusZoom===before)return;
+      const centerInNotes=(songUi.scroll.scrollLeft+songUi.scroll.clientWidth/2)/before;
+      syncFocusZoom();songUi.scroll.scrollLeft=centerInNotes*focusZoom-songUi.scroll.clientWidth/2;
+    });
+  }
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&focusActive){exitFocus();e.preventDefault();}});
   const songVoices=new Set();
   function stopSong(){songPlaying=false;cancelAnimationFrame(songAnimation);songAnimation=0;
     for(const voice of songVoices){try{voice.stop();}catch(e){}}
@@ -909,7 +1035,7 @@
     }catch(e){}
   }
   function focusSongKeys(midis,force=false){if(!midis.length)return;
-    const center=midis.reduce((total,n)=>total+pianoX(n),0)/midis.length;
+    const center=midis.reduce((total,n)=>total+pianoX(n),0)/midis.length*(focusActive?focusZoom:1);
     const view=songUi.scroll.clientWidth,left=songUi.scroll.scrollLeft;
     if(force||center<left+view*.22||center>left+view*.78){
       songUi.scroll.scrollLeft=Math.max(0,center-view/2);
@@ -972,9 +1098,15 @@
     if(songPosition>=song.duration){stopSong();setSongPosition(song.duration);$('songFeedback').textContent='Song finished! Replay it or try the note-by-note practice mode.';return;}
     songAnimation=requestAnimationFrame(frameSong);
   }
-  function playSong(){if(!song)return;
-    resumeAudio();preloadSongSamples();
+  async function playSong(){if(!song)return;
     if(songPlaying){if($('songMode').value!=='step')songPosition=Math.min(song.duration,(performance.now()-songStartedAt)/1000*Number($('songSpeed').value)/100);stopSong();setSongPosition(songPosition);$('songFeedback').textContent='Paused. Press Play to continue.';return;}
+    // Auto-enter immersive practice on start; users can exit without losing position.
+    enterFocus();
+    if(state.sound&&!await ensureAudioReady()){
+      $('songFeedback').textContent='Sound is paused by the browser. Tap Restore sound, then press Play.';
+      return;
+    }
+    preloadSongSamples();
     if(songPosition>=song.duration)seekSong(0);
     songPlaying=true;
     if($('songMode').value==='step'){
@@ -1084,7 +1216,7 @@
   $('songPlay').addEventListener('click',playSong);
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&songPlaying&&$('songMode').value==='watch'){
     songPosition=Math.min(song.duration,(performance.now()-songStartedAt)/1000*Number($('songSpeed').value)/100);
-    stopSong();setSongPosition(songPosition);$('songFeedback').textContent='Paused while the app was in the background.';
+    stopSong();setSongPosition(songPosition);$('songFeedback').textContent='Paused while the app was in the background. Tap Play to continue.';
   }});
   $('songReset').addEventListener('click',()=>{seekSong(0);$('songFeedback').textContent='Back to the start. Ready to practice.';});
   $('songCenter').addEventListener('click',()=>{
@@ -1099,14 +1231,14 @@
   });
   $('songMode').addEventListener('change',()=>{seekSong(0);updateSongButtons();$('songFeedback').textContent=$('songMode').value==='step'?'Practice waits for you to play every highlighted note.':'Watch the keys light up in sync with the song.';});
   $('songTrack').addEventListener('change',()=>{seekSong(0);buildSongGroups();drawSongRoll(0);$('songFeedback').textContent='Part selected. Play to hear or practice only those notes.';});
-  setSong(demoSong('twinkle'));focusSongKeys([60],true);
+  setSong(demoSong('twinkle'));syncFocusZoom();focusSongKeys([60],true);
 
   $('tabPiano').addEventListener('click',()=>{state.instrument='piano';refreshInstrument();});
   $('tabKalimba').addEventListener('click',()=>{state.instrument='kalimba';refreshInstrument();});
   $('octaveDown').addEventListener('click',()=>{state.octave=Math.max(2,state.octave-1);refreshInstrument();});
   $('octaveUp').addEventListener('click',()=>{state.octave=Math.min(6,state.octave+1);refreshInstrument();});
   $('labelsToggle').addEventListener('change',e=>{state.showLabels=e.target.checked;document.querySelectorAll('.piano,.tine-row,.kalimba-note-grid').forEach(el=>el.classList.toggle('hide-labels',!state.showLabels));persist();});
-  $('soundBtn').addEventListener('click',()=>{state.sound=!state.sound;$('soundBtn').textContent=state.sound?'♫ Sound on':'♪ Sound off';$('soundBtn').setAttribute('aria-pressed',String(state.sound));persist();if(state.sound){resumeAudio();preloadPianoOctave();playNote('C4');}updateAudioStatus();});
+  $('soundBtn').addEventListener('click',()=>{state.sound=!state.sound;$('soundBtn').textContent=state.sound?'♫ Sound on':'♪ Sound off';$('soundBtn').setAttribute('aria-pressed',String(state.sound));persist();if(state.sound){resumeAudio();preloadPianoOctave();playNote('C4');}syncAudioGate();updateAudioStatus();});
   $('retrySamples').addEventListener('click',()=>{sampleFailCount=0;resumeAudio();preloadPianoOctave();updateAudioStatus();});
   document.querySelectorAll('[data-mode]').forEach(el=>el.addEventListener('click',()=>switchMode(el.dataset.mode)));
   $('clefSelect').addEventListener('change',e=>{state.clef=e.target.value==='bass'?'bass':'treble';if(state.mode==='read'){syncReadRange();nextChallenge();}persist();});
