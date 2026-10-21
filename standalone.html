@@ -338,7 +338,7 @@
     <div class="song-feedback" id="songFeedback" aria-live="polite">Ready. Press Play to see keys light up.</div>
     <p class="song-help">Supports standard MIDI files with note data, including most piano MIDI downloads. MIDI is not an MP3 or YouTube link: audio recordings don't contain reliable individual key information. Songs with many instruments may be easier to learn by selecting a single track. The kalimba above still works; notes in its range can light up during playback too.</p>
   </section>
-  <p class="footer">v0.11 · Modular production build & Safari playback recovery · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
+  <p class="footer">v0.12 · Typed state foundations and isolated song-studio architecture · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
 </main>
 <div class="audio-recovery" id="audioRecovery" role="status" aria-live="polite" hidden><span id="audioRecoveryMessage">iPhone paused the piano audio. Tap to restore it.</span><button id="audioRestore" type="button">♫ Restore sound</button></div>
   <script>
@@ -984,14 +984,14 @@ function paintSongRoll({at, canvas, notes, maxDuration, pianoX, midiSharp, lower
 
 /* ui/beginner-trainer.js */
 // Beginner instrument UI and drills. No dependency on the song-studio module.
-function createBeginnerTrainer({$,state,Theory,audio,songCallbacks}) {
+function createBeginnerTrainer({$,state,Theory,audio,songCallbacks,savePreferences}) {
   const {NOTES,WHITE,BLACK_POS,noteMidi}=Theory;
   const KALIMBA_ORDER=['E6','C6','A5','F5','D5','B4','G4','E4','C4','D4','F4','A4','C5','E5','G5','B5','D6'];
   const KALIMBA_ASC=['C4','D4','E4','F4','G4','A4','B4','C5','D5','E5','F5','G5','A5','B5','C6','D6','E6'];
   const {playNote,preloadPianoOctave,updateAudioStatus}=audio;
   let currentPool = [];
   let nextTimer = null;
-  function persist(){try{localStorage.setItem('garden-notes-v1', JSON.stringify({instrument:state.instrument,octave:state.octave,showLabels:state.showLabels,sound:state.sound,correct:state.correct,best:state.best,clef:state.clef}));}catch(e){}}
+  function persist(){savePreferences();}
   function makePool(){if(state.instrument==='kalimba')return KALIMBA_ASC.slice(); const oc=state.octave;let p=[];for(let n=0;n<=12;n++){let midi=12*(oc+1)+n;p.push(NOTES[midi%12]+Math.floor(midi/12-1));}return p;}
   const NATURAL=['C','D','E','F','G','A','B'];
   function readPool(){ const start = state.instrument==='piano'&&state.clef==='bass'?3:4; return NATURAL.map(n=>n+start).concat('C'+(start+1)); }
@@ -1291,7 +1291,7 @@ function createSongLibrary({$,callbacks}) {
       clone.querySelector('head').append(data);
       const out='<!DOCTYPE html>\n'+clone.outerHTML;
       const blob=new Blob([out],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.11_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
+      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.12_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
       setTimeout(()=>URL.revokeObjectURL(url),15000);
       $('songLibraryStatus').textContent='✓ Exported private HTML with '+Object.keys(merged).length+' embedded MIDI song(s). Keep it private; the iPhone Files preview may not run interactive HTML.';
     }catch(e){$('songLibraryStatus').textContent='Could not create private song copy: '+(e.message||'export failed');}
@@ -1341,57 +1341,11 @@ function createSongLibrary({$,callbacks}) {
 }
 
 
-/* app.js */
-// DOM orchestration and application state; gradually migrate UI subsystems here.
-// Application composition root: dependencies explicit; production loads native ESM.
-
-
-
-
-
-
-
-
-
-
-
-
-const $ = id => document.getElementById(id);
-const DEFAULTS={instrument:'piano',octave:4,showLabels:true,sound:true,correct:0,best:0,clef:'treble'};
-let saved={};
-try{saved=JSON.parse(localStorage.getItem('garden-notes-v1')||'{}')||{};}catch(e){}
-const state={...DEFAULTS,...saved,mode:'explore',current:null,answered:false,streak:0,drillIndex:-1};
-state.instrument=['piano','kalimba'].includes(state.instrument)?state.instrument:'piano';
-state.octave=Math.max(2,Math.min(6,Number(state.octave)||4));
-state.clef=state.clef==='bass'?'bass':'treble';
-const {NOTES,noteMidi,midiName,midiSharp,lowerBoundSong}=Theory;
-const {demoSong}=SongCatalog;
-const audio=createAudioEngine({state,$,noteMidi,midiName});
-const {syncAudioGate,resumeAudio,restoreAudio,ensureAudioReady,preloadPianoOctave,updateAudioStatus,preloadSongSamples,playNote,soundMidi,soundMidiAt,stopSongVoices,retrySamples,clockSeconds,setInterruptionHandler}=audio;
-const songCallbacks={isPlaying:()=>songPlaying,readPlayedNotes:notes=>readPlayedNotes(notes),acceptPracticeNote:n=>acceptSongPracticeNote(n)};
-const trainer=createBeginnerTrainer({$,state,Theory,audio,songCallbacks});
-const {handleNote,refreshInstrument,switchMode,nextChallenge,startDrill,syncReadRange,score,persist}=trainer;
-  const SONG_FIRST=21,SONG_LAST=108,SONG_W=29;
-  let song=null,songPosition=0,songPlaying=false;
-  let songAnimation=0,songGroups=[],songGroupIndex=0,songGroupDone=new Set();
-  const transport=createSongTransport({
-    now:clockSeconds,
-    schedule:(note,at,duration,velocity)=>soundMidiAt(note.midi,at,duration,velocity),
-    onScheduled:note=>focusSongKeys([note.midi])
-  });
-  // Safari can interrupt the AudioContext without a visibility change.
-  // Pause at its actual audio-clock position rather than running silently.
-  setInterruptionHandler(()=>{
-    if(state.sound&&songPlaying&&$('songMode').value==='watch'){
-      songPosition=transport.pause();stopSong();setSongPosition(songPosition);
-      $('songFeedback').textContent='Piano audio interrupted. Restore sound, then tap Play to continue.';
-    }
-  });
-  let songActive=new Set(),selectedSongNotes=[],songMaxDuration=0;
-  const songKeys=new Map();
-  const songUi={scroll:$('songScroll'),canvas:$('songRoll'),keys:$('songKeys')};
-  const {pianoX,setupSongKeys}=createSongKeyboard({SONG_FIRST,SONG_LAST,SONG_W,songKeys,songUi,midiSharp,midiName,onPress:n=>handleSongKey(n)});
-  // --- v0.6 live key names + continuously scrolling pitch staff ---
+/* ui/song-notation.js */
+// Song notation view: note labels, live note readout and scrolling staff.
+// Musical positioning remains in core/notation and visual/staff-renderer.
+function createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,getContext}) {
+  const {NOTES,midiName,midiSharp}=Theory;
   const keyLabelStore='garden-notes-score-labels-v1';
   const scoreCanvas=$('songStaffCanvas'), scoreContainer=$('songStaffPanel');
   let lastTouchedNotes=[], scoreLabels='pressed';
@@ -1413,15 +1367,118 @@ const {handleNote,refreshInstrument,switchMode,nextChallenge,startDrill,syncRead
     const names=lastTouchedNotes.map(midiName);
     $('liveNoteName').textContent=names.length?names.join(' + '):'—';
     $('liveNoteDetail').innerHTML=lastTouchedNotes.length?(lastTouchedNotes.length>1?'<b>Chord / multiple notes</b>':'<b>'+ (lastTouchedNotes[0]===60?'Middle C · ':'')+'Note played</b>')+' · '+lastTouchedNotes.map(n=>midiSharp(n)?midiName(n).replace('#','♯')+' / '+NOTES[(n+1)%12]+'♭'+Math.floor(n/12-1):midiName(n)).join(' · '):'Press any piano key to identify it.';
-    renderSongStaff(songPosition);
+    renderSongStaff(getContext().songPosition);
   }
-  function songStaffHand(note){return Notation.assignStaff(note,song?.tracks||[]);}
-  function renderSongStaff(at=songPosition){
+  function songStaffHand(note){return Notation.assignStaff(note,getContext().song?.tracks||[]);}
+  function renderSongStaff(at=getContext().songPosition){
+    const {song,selectedSongNotes,songPlaying,songGroups,songGroupIndex}=getContext();
     const stepActive = $('songMode').value==='step'&&songPlaying
       ? new Set(songGroups[songGroupIndex]?.midis||[]) : new Set();
     StaffRenderer.renderSongStaff({at,scoreCanvas,scoreContainer,song,selectedSongNotes,lastTouchedNotes,scoreLabels,stepActive,songStaffHand});
   }
-  window.addEventListener('resize',()=>renderSongStaff(songPosition),{passive:true});
+  window.addEventListener('resize',()=>renderSongStaff(getContext().songPosition),{passive:true});
+  return Object.freeze({updateSongKeyLabels,readPlayedNotes,renderSongStaff});
+}
+
+
+/* core/song-state.js */
+function selectTrackNotes(notes, track) {
+    return track === 'all' ? Array.from(notes) : notes.filter(note => String(note.track) === track);
+}
+function maximumNoteDuration(notes) {
+    return notes.reduce((max, n) => Math.max(max, Math.max(0, n.end - n.start)), 0);
+}
+function clampPlaybackPosition(at, duration) {
+    const end = Number.isFinite(duration) ? Math.max(0, duration) : 0;
+    return Number.isFinite(at) ? Math.max(0, Math.min(end, at)) : 0;
+}
+function formatSongTime(at) {
+    const sec = Number.isFinite(at) ? Math.max(0, Math.floor(at)) : 0;
+    return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+}
+
+
+/* app/preferences.js */
+const KEY = 'garden-notes-v1';
+const defaults = { instrument: 'piano', octave: 4, showLabels: true, sound: true, correct: 0, best: 0, clef: 'treble' };
+const validScore = (value) => Number.isInteger(value) && typeof value === 'number' && value >= 0 && value < 1e9 ? value : 0;
+function normalizePreferences(value) {
+    const data = (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+    return {
+        instrument: data.instrument === 'kalimba' ? 'kalimba' : 'piano',
+        octave: typeof data.octave === 'number' && Number.isFinite(data.octave) ? Math.max(2, Math.min(6, Math.floor(data.octave))) : 4,
+        showLabels: typeof data.showLabels === 'boolean' ? data.showLabels : true,
+        sound: typeof data.sound === 'boolean' ? data.sound : true,
+        correct: validScore(data.correct),
+        best: validScore(data.best),
+        clef: data.clef === 'bass' ? 'bass' : 'treble'
+    };
+}
+function loadAppPreferences(storage) {
+    let decoded = defaults;
+    try {
+        const raw = (storage ?? localStorage).getItem(KEY);
+        if (raw)
+            decoded = JSON.parse(raw);
+    }
+    catch { /* Private browsing or corrupt data; defaults remain. */ }
+    return { ...normalizePreferences(decoded), mode: 'explore', current: null, answered: false, streak: 0, drillIndex: -1 };
+}
+function persistAppPreferences(state, storage) {
+    try {
+        (storage ?? localStorage).setItem(KEY, JSON.stringify(normalizePreferences(state)));
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+
+
+/* ui/song-studio.js */
+// Song Studio owns its own session lifecycle, playback, notation, keyboard,
+// and library. The app composition root injects only the shared sound engine,
+// persistent preferences and DOM lookup. No global application mutable state.
+
+
+
+
+
+
+
+
+
+
+
+
+function createSongStudio({$,state,audio}) {
+  const {NOTES,noteMidi,midiName,midiSharp,lowerBoundSong}=Theory;
+  const {demoSong}=SongCatalog;
+  const {preloadSongSamples,soundMidi,soundMidiAt,stopSongVoices,clockSeconds,setInterruptionHandler,ensureAudioReady}=audio;
+  const SONG_FIRST=21,SONG_LAST=108,SONG_W=29;
+  let song=null,songPosition=0,songPlaying=false;
+  let songAnimation=0,songGroups=[],songGroupIndex=0,songGroupDone=new Set();
+  const transport=createSongTransport({
+    now:clockSeconds,
+    schedule:(note,at,duration,velocity)=>soundMidiAt(note.midi,at,duration,velocity),
+    onScheduled:note=>focusSongKeys([note.midi])
+  });
+  // Safari can interrupt the AudioContext without a visibility change.
+  // Pause at its actual audio-clock position rather than running silently.
+  setInterruptionHandler(()=>{
+    if(state.sound&&songPlaying&&$('songMode').value==='watch'){
+      songPosition=transport.pause();stopSong();setSongPosition(songPosition);
+      $('songFeedback').textContent='Piano audio interrupted. Restore sound, then tap Play to continue.';
+    }
+  });
+  let songActive=new Set(),selectedSongNotes=[],songMaxDuration=0;
+  const songKeys=new Map();
+  const songUi={scroll:$('songScroll'),canvas:$('songRoll'),keys:$('songKeys')};
+  const {pianoX,setupSongKeys}=createSongKeyboard({SONG_FIRST,SONG_LAST,SONG_W,songKeys,songUi,midiSharp,midiName,onPress:n=>handleSongKey(n)});
+  // --- v0.6 live key names + continuously scrolling pitch staff ---
+  const notation=createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,
+    getContext:()=>({song,songPosition,songPlaying,songGroups,songGroupIndex,selectedSongNotes})});
+  const {updateSongKeyLabels,readPlayedNotes,renderSongStaff}=notation;
 
   function scopedNotes(){return selectedSongNotes;}
   let songNotes=[];
@@ -1435,11 +1492,11 @@ const {handleNote,refreshInstrument,switchMode,nextChallenge,startDrill,syncRead
     $('songFeedback').textContent=(song.source==='MIDI'?'MIDI imported · ':'Demo ready · ')+songNotes.length+' notes. Choose Watch or Wait for my notes.';
     preloadSongSamples(songNotes);updateSongButtons();
   }
-  function buildSongGroups(){const track=$('songTrack').value;selectedSongNotes=songNotes.filter(n=>track==='all'||String(n.track)===track);
-    songMaxDuration=selectedSongNotes.reduce((m,n)=>Math.max(m,n.end-n.start),0);
+  function buildSongGroups(){const track=$('songTrack').value;selectedSongNotes=selectTrackNotes(songNotes,track);
+    songMaxDuration=maximumNoteDuration(selectedSongNotes);
     songGroups=PracticeSession.groupedStarts(scopedNotes());songGroupIndex=0;songGroupDone.clear();
   }
-  function fmtTime(t){const s=Math.max(0,Math.floor(t));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+  const fmtTime=formatSongTime;
   function updateSongButtons(){const stepping=$('songMode').value==='step';
     $('songPlay').textContent=stepping?'▶ Start note practice':songPlaying?'Ⅱ Pause song':'▶ Play song';
     if(stepping&&songPlaying)$('songPlay').textContent='Ⅱ Pause practice';
@@ -1457,7 +1514,7 @@ const {handleNote,refreshInstrument,switchMode,nextChallenge,startDrill,syncRead
     stopSongVoices();
     updateSongButtons();songActive.clear();renderSongHighlights();}
   function setSongPosition(time){if(!song)return;
-    songPosition=Math.max(0,Math.min(song.duration,time));
+    songPosition=clampPlaybackPosition(time,song.duration);
     const p=songPosition;
     $('songTime').textContent=fmtTime(p)+' / '+fmtTime(song.duration);
     $('songProgress').value=Math.round(1000*p/Math.max(.1,song.duration));
@@ -1577,6 +1634,36 @@ const {handleNote,refreshInstrument,switchMode,nextChallenge,startDrill,syncRead
   $('songTrack').addEventListener('change',()=>{seekSong(0);buildSongGroups();drawSongRoll(0);$('songFeedback').textContent='Part selected. Play to hear or practice only those notes.';});
   setSong(demoSong('twinkle'));syncFocusZoom();focusSongKeys([60],true);
 
+  // Expose only the limited operations the app and beginner trainer need.
+  return Object.freeze({
+    songCallbacks: Object.freeze({isPlaying:()=>songPlaying,readPlayedNotes,acceptPracticeNote:acceptSongPracticeNote}),
+    isWatching:()=>songPlaying&&$('songMode').value==='watch',
+    isPlaying:()=>songPlaying,
+    pauseForSoundSwitch:()=>{songPosition=transport.pause();stopSongVoices();},
+    resumeAfterSoundSwitch:()=>transport.start(selectedSongNotes,songPosition,Number($('songSpeed').value)/100,song.duration),
+    soundRestoreFailed:()=>{stopSong();setSongPosition(songPosition);$('songFeedback').textContent='Audio needs restoring. Tap Restore sound, then press Play.';}
+  });
+}
+
+
+/* app.js */
+// Application composition root: preferences, shared audio and beginner trainer.
+// Song Studio owns playback / notation / song library; UI modules own their DOM.
+
+
+
+
+
+const $ = id => document.getElementById(id);
+const state=loadAppPreferences();
+const {noteMidi,midiName}=Theory;
+const audio=createAudioEngine({state,$,noteMidi,midiName});
+const {syncAudioGate,ensureAudioReady,preloadPianoOctave,updateAudioStatus,playNote,retrySamples}=audio;
+const studio=createSongStudio({$,state,audio});
+const trainer=createBeginnerTrainer({$,state,Theory,audio,songCallbacks:studio.songCallbacks,savePreferences:()=>persistAppPreferences(state)});
+const {handleNote,refreshInstrument,switchMode,nextChallenge,startDrill,syncReadRange,score,persist}=trainer;
+
+
   $('tabPiano').addEventListener('click',()=>{state.instrument='piano';refreshInstrument();});
   $('tabKalimba').addEventListener('click',()=>{state.instrument='kalimba';refreshInstrument();});
   $('octaveDown').addEventListener('click',()=>{state.octave=Math.max(2,state.octave-1);refreshInstrument();});
@@ -1585,17 +1672,17 @@ const {handleNote,refreshInstrument,switchMode,nextChallenge,startDrill,syncRead
   $('soundBtn').addEventListener('click',async()=>{
     // Switching clock sources (Web Audio <-> performance clock) must never
     // jump the song to the end or replay notes from an old clock epoch.
-    const watching=songPlaying&&$('songMode').value==='watch';
-    if(watching){songPosition=transport.pause();stopSongVoices();}
+    const watching=studio.isWatching();
+    if(watching)studio.pauseForSoundSwitch();
     state.sound=!state.sound;
     $('soundBtn').textContent=state.sound?'♫ Sound on':'♪ Sound off';
     $('soundBtn').setAttribute('aria-pressed',String(state.sound));persist();
     if(state.sound){
       const ready=await ensureAudioReady();
-      if(!ready&&watching){stopSong();setSongPosition(songPosition);$('songFeedback').textContent='Audio needs restoring. Tap Restore sound, then press Play.';}
+      if(!ready&&watching)studio.soundRestoreFailed();
       preloadPianoOctave();
     }
-    if(watching&&songPlaying)transport.start(selectedSongNotes,songPosition,Number($('songSpeed').value)/100,song.duration);
+    if(watching&&studio.isPlaying())studio.resumeAfterSoundSwitch();
     syncAudioGate();updateAudioStatus();
   });
   $('retrySamples').addEventListener('click',retrySamples);

@@ -1,54 +1,37 @@
-# Garden Notes v0.11 — genuine modular deployment
+# Garden Notes v0.12 — Song session extraction & typed state foundations
 
-A personal, lightweight browser piano and 17-key kalimba trainer, continued from the **unmodified v0.10 baseline**. Its public GitHub Pages application is now a **native ES module graph**, not an HTML file containing the whole program.
+This release continues directly from v0.11, preserving the *external-module* GitHub Pages app, the same UI, song library and storage key, and the standalone **personal** MIDI export.
 
-## Deploy to GitHub Pages
+## Install
 
-1. Keep a backup of your personal MIDI files. Browser storage is associated with your site URL and browser, and can be cleared independently.
-2. Extract `Garden_Notes_v0.11_GitHub_Ready.zip` and upload the **contents directly to the publishing root**, with `index.html` at the root. **Keep the `assets/` subfolders and filenames.** The site must be served over HTTP(S), not opened as `file://`.
-3. Visit your existing site URL. Select the song, instrument, or exercise. The first loading of piano samples may require internet access.
+1. Back up your personal MIDI files. The existing IndexedDB data should persist on the **same site URL and browser**, but changing origins or clearing site data can remove it.
+2. Extract `Garden_Notes_v0.12_GitHub_Ready.zip`. Publish **all contents**, including the `assets/` directory, with `index.html` at the repository's GitHub Pages publishing root.
+3. Open the live HTTPS page. The first grand-piano sample load requires internet. You may need to tap to unlock iOS audio.
+4. Do **not** publish a personal `PRIVATE_Songs.html` file to GitHub Pages; it may contain third-party MIDI arrangements.
 
-## File structure
+## What actually changed
 
-```text
-index.html                    # HTML markup, no inlined application or style code
-assets/styles.css             # stylesheet
-assets/app.js                 # UI composition root / active song session
-assets/core/*.js              # theory, notation, MIDI, transport, practice and catalog
-assets/audio/engine.js        # samples, Web Audio, interruption recovery
-assets/visual/*.js            # notation and falling-note rendering
-assets/storage/song-store.js  # IndexedDB storage (unchanged data format)
-assets/ui/*.js                # instrument training, keyboard, focus mode, library
-standalone.html               # generated, embedded-JS/CSS version ONLY for private export
-example-song.mid              # original, redistributable testing exercise
-release.json                  # checksums and module count
-```
-
-`index.html` is around 14 KB; the deployed app has **15 separate JavaScript modules plus a CSS file**. The normal site does not load or execute `standalone.html`; that file is fetched **only if you choose to export a private song package**. The portable personal copy is created from those same sources, then your own MIDI data is inserted locally. Never publish your personal embedded-MIDI HTML to a public GitHub repository.
+- `src/app.js` is now a ~3.5 KB composition root, versus ~18 KB in v0.11. It wires shared Web Audio, typed persistent preferences, the beginner trainer and Song Studio.
+- `src/ui/song-studio.js` independently owns transport, song selection, session progress, keyboard, song/practice mode and events. `src/ui/song-notation.js` owns the live key labels and sheet-music UI. This is a meaningful controller extraction; Song Studio is still a ~13 KB module, not a totally finished architecture.
+- `src/app/preferences.ts` adds strongly typed persisted v1 preference normalization, a stable v1 storage key, safe fallback for private browsers and validated scores.
+- `src/core/song-state.ts` adds pure typed helpers for note-track selection, duration, playback time bounds and display time.
+- The TypeScript sources are compiled with the available `tsc` compiler to ES modules before copying to GitHub-ready assets. The other modules remain JavaScript. **This is incremental TypeScript, not a fully converted codebase.** No framework or Vite migration.
+- Shared CSS and externally loaded ES module assets stay unchanged in architecture; `index.html` contains interface markup only. Generated `standalone.html` is retained specifically for personal embedded-song exports.
 
 ## Developer commands
 
-No NPM dependencies are needed for the application itself. Python 3, Node 22+, and optional browser-test dependencies are required for development.
+Requires Python 3, Node.js 22+, TypeScript `tsc` 5.x, and optional Python/Chromium Playwright dependencies for browser tests.
 
-```bash
+```
 python scripts/build.py
 bash scripts/validate.sh
 python scripts/package.py
 ```
 
-`npm run build` and `npm test` are wrappers for the above if you prefer Node commands. The production application uses native ESM, **not Vite or TypeScript**; source files are ordinary JavaScript with modular interfaces. Some non-UI modules pass static `tsc --checkJs`. We have not claimed a fully typed codebase.
+`npm run build` and `npm test` call the same scripts. `tsconfig.json` uses strict type checking for two new `.ts` modules; compiled `.js` files live under `.compiled/` and are generated rather than manually edited.
 
-## What was preserved
+## Release boundaries and validation
 
-The MIDI parser, calibrated clef positions, 88-key piano, 17-key kalimba, guide, falling notes, audio lookahead, piano samples with fallback, iPhone immersive view, touch-to-play and chord practice, save/import/delete library features, private embedded-MIDI exports, and the original local storage keys were carried over. Balamb Garden and Garden of the Gods are **slots only**; the third-party MIDI files are **not** bundled.
+The tests cover MIDI, pitch/notation, song time and track selection, corruption-safe preferences, normal playback, speed, pause, simulated iOS interruption and recovery, full-screen focus, 88-key input, kalimba, MIDI import, local private-pack generation and re-opening. Chromium browser tests load the real module bytes through test-only data URLs: this environment **blocks localhost navigation**, so these checks are **not** proof of real-origin IndexedDB persistence or iPhone Safari runtime behavior. A physical-device acceptance test is still required.
 
-## Verification and known limits
-
-- 24 unit/module tests: music theory, notation, MIDI, timing, and direct ES module imports.
-- Automated browser tests: desktop, mobile portrait, landscape, MIDI import, practice, kalimba, simulated iOS interruption and audio clock, private export and reopen.
-- Public distribution contract: CSS and JS external, every relative ESM import resolves, no big inline code in `index.html`.
-- Screenshot comparisons against v0.10: no material layout difference.
-- **Not verified:** real iPhone Safari hardware and actual audible grand-piano quality. Real-origin IndexedDB persistence across reload was not retested here because the sandbox browser blocks local URL navigation; the old storage code and schema are preserved. Run `GARDEN_REAL_ORIGIN_TEST=1 bash scripts/validate.sh` outside that restriction to enable this additional integration check.
-- Scrolling staff is not professional sheet engraving; some rhythmic notation and hand assignment are approximations from MIDI.
-
-The source ZIP includes earlier working baselines; retain it for future changes instead of editing built assets directly.
+The two RPG songs are not bundled as MIDI files; importing your own copies is still required. The scrolling notation is not yet an engraved MusicXML score, and the Web Audio sample backend still needs physical iPhone testing.

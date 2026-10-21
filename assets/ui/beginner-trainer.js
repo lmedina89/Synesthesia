@@ -1,12 +1,12 @@
 // Beginner instrument UI and drills. No dependency on the song-studio module.
-export function createBeginnerTrainer({$,state,Theory,audio,songCallbacks}) {
+export function createBeginnerTrainer({$,state,Theory,audio,songCallbacks,savePreferences}) {
   const {NOTES,WHITE,BLACK_POS,noteMidi}=Theory;
   const KALIMBA_ORDER=['E6','C6','A5','F5','D5','B4','G4','E4','C4','D4','F4','A4','C5','E5','G5','B5','D6'];
   const KALIMBA_ASC=['C4','D4','E4','F4','G4','A4','B4','C5','D5','E5','F5','G5','A5','B5','C6','D6','E6'];
   const {playNote,preloadPianoOctave,updateAudioStatus}=audio;
   let currentPool = [];
   let nextTimer = null;
-  function persist(){try{localStorage.setItem('garden-notes-v1', JSON.stringify({instrument:state.instrument,octave:state.octave,showLabels:state.showLabels,sound:state.sound,correct:state.correct,best:state.best,clef:state.clef}));}catch(e){}}
+  function persist(){savePreferences();}
   function makePool(){if(state.instrument==='kalimba')return KALIMBA_ASC.slice(); const oc=state.octave;let p=[];for(let n=0;n<=12;n++){let midi=12*(oc+1)+n;p.push(NOTES[midi%12]+Math.floor(midi/12-1));}return p;}
   const NATURAL=['C','D','E','F','G','A','B'];
   function readPool(){ const start = state.instrument==='piano'&&state.clef==='bass'?3:4; return NATURAL.map(n=>n+start).concat('C'+(start+1)); }

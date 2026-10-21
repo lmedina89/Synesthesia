@@ -1,11 +1,11 @@
 {
-  "version": "0.11.0",
-  "kind": "real-ESM-file-modules",
-  "module_count": 15,
+  "version": "0.12.0",
+  "kind": "typed-core-ESM-modules",
+  "module_count": 19,
   "sha256": {
-    "index.html": "9049d6c08b83d75c1af52857f39968fbfaf80505744508cb4518ee8754c5fd61",
-    "standalone.html": "02e4555cb359d984391e2c72c74d30b758ec46eedb28a51686f87effd63f6624",
-    "assets/app.js": "f3fbd6f2552b88efe5c130e01186326194849fe37c7097da11aac47589292508",
+    "index.html": "80aeca8c79cfa71c192fb6c43b74bb168d556b6c837af9152ac7fbf49bf7565c",
+    "standalone.html": "3061c37b89ea5fc0f27e7a1969ddef6737c0c8fab15a6d3417448aacd1696be6",
+    "assets/app.js": "ba751fda46467cc2d92c03a146de87b67e98912d27ad51fb530eba5345e805bc",
     "assets/styles.css": "4c5439659bce84e88a5bb10ec01edd90f37ab9a535e49fb0f551979e233eef37"
   },
   "third_party_midi_bundled": false

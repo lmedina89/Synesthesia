@@ -1,44 +1,41 @@
-# Garden Notes v0.11 — architecture and refactor record
+# Garden Notes v0.12 architecture decisions
 
-## Why this release exists
+### Baseline and constraints
+v0.11 remains unchanged in the provided previous release ZIPs. v0.12 maintains the native ES module deploy, no mandatory runtime framework, consistent private standalone export, identical IndexedDB/localStorage schema, no redistributed commercial MIDI arrangements, and the existing UI and iPhone-sized immersive view.
 
-The v0.10 deploy combined all JS and CSS into one ~114 KB HTML file and used a ~41 KB `src/app.js` controller. Despite some separate source files, this was misleadingly described as fully production-refactored. v0.11 fixes those **two specific problems** without changing the user's preferred interface or rewriting the audio engine.
+### Dependency direction
 
-## Real module boundaries
+```
+src/app.js (composition root, DOM bindings, shared preferences)
+    |-- app/preferences.ts (typed, pure validation/persistence)
+    |-- audio/engine.js
+    |-- ui/beginner-trainer.js
+    |-- ui/song-studio.js (session owner)
+          |-- core/song-state.ts (typed, pure song helpers)
+          |-- core/{transport,session,catalog,notation,theory}.js
+          |-- visual/{roll-renderer,staff-renderer}.js
+          |-- ui/{song-notation,song-keyboard,focus-mode,song-library}.js
+                    |-- storage/song-store.js
+```
 
-- `src/app.js` — composition root, audio transport, song session orchestration, and UI wiring, **~18 KB** versus previous ~41 KB; further controller cleanup is possible.
-- `src/ui/beginner-trainer.js` — introductory lessons, note drills, instrument switching and score.
-- `src/ui/song-keyboard.js` — 88-key keyboard creation and pointer inputs.
-- `src/ui/focus-mode.js` — immersive viewport sizing, zoom and keyboard centering.
-- `src/ui/song-library.js` — song selection, IndexedDB MIDI import/delete, private export.
-- `src/visual/roll-renderer.js` — falling note frame painter.
-- `src/visual/staff-renderer.js` — treble/bass staff drawing, already isolated in v0.10.
-- `src/core/{theory,notation,session,transport,catalog,midi}.js` — musical and timing logic.
-- `src/audio/engine.js` — Web Audio, piano samples, interruption recovery.
-- `src/storage/song-store.js` — same IndexedDB schema and keys as before.
+Song state is now private to the Song Studio factory instead of being stored in the application root; its outward callback interface is intentionally narrow. The beginner trainer has only a tiny injected `songCallbacks` adapter. Its persistent preferences are handled by a typed stable-schema adapter; no UI component writes the v1 preference key directly.
 
-Components communicate using **explicit ES module imports** and small injected callbacks rather than untracked global concatenation order. Modules that need song-session feedback receive callbacks at initialization; pure modules do not depend on DOM or playback.
+### Incremental TypeScript
+Only `app/preferences.ts` and `core/song-state.ts` are migrated. These compile with `tsc --strict` into `.compiled/` before public/standalone packaging. The remaining JavaScript is *not* type checked as a whole, so this milestone must not be called a complete TypeScript conversion.
 
-## Two build targets, one source of truth
+### Invariants and tests
 
-`scripts/build.py` validates module parseability, copies source modules and CSS to `dist/assets`, and creates `dist/index.html` with external CSS and a native `<script type="module">` reference. Separately, it compiles those **same modules** into `dist/standalone.html` for private embedded-MIDI export, preserving the existing feature without dictating the deploy architecture.
+- Identical original key `garden-notes-v1` for preferences; schema compatible.
+- IndexedDB schema and song parser unchanged.
+- Every public relative ESM import resolves within `dist/assets/`.
+- The original 24 v0.11 unit tests must continue passing, in addition to typed helpers and existing browser/integration checks.
+- Preserve public modular HTML and separate personal standalone output generated from the exact same source.
+- No new song content without licensing approval.
+- Real-origin persistent storage and actual hardware Safari playback are still outstanding tests, not validated facts.
 
-No third-party build system or external compilation service is required. The reference deployment needs HTTP(S) to load browser modules; GitHub Pages supports it. This is not yet a bundled/minified production optimization, and we make no false TypeScript/Vite claims.
+### Follow-up work
 
-## Test gates
-
-1. Unit tests for MIDI/theory/notation/scheduling and native ESM imports.
-2. Distribution checks for external assets, import graph, no big inline script/style.
-3. Automated Chromium tests (desktop / portrait / landscape) and simulated audio interruptions.
-4. Private packed-song export tests for both standalone and modular-to-standalone paths.
-5. Regression visual comparison against v0.10 screenshots.
-
-The current execution environment blocks direct navigation to localhost and file URLs in Chromium. Tests therefore load the **same release module bytes** through test-only data-URL imports to check runtime functionality. This validates the module graph and browser behavior but is not a substitute for a real HTTP origin and physical-device check.
-
-## Next technical work (not claimed complete)
-
-- Further split song-session/application state and input controls from the 18 KB composition root.
-- Add strict TypeScript type coverage and incremental migration if it delivers practical value.
-- Verify real-origin IndexedDB migration, file downloads and sample fetches on a physical iPhone.
-- Accurate MusicXML notation, hand/chord practice scoring, practice sections and MIDI keyboard hardware input.
-- Improve test harness for network/CSP error cases and high-polyphony performance.
+1. Continue splitting transport/UI event wiring from `ui/song-studio.js` only when backed by tests; avoid turning one file-size target into gratuitous modules.
+2. Extend TypeScript typing through the song-session interfaces and audio scheduler, measuring type errors and regression impact before enabling strict `checkJs` across legacy code.
+3. Add actual-origin production smoke tests in CI/CD (real `http(s)`, IndexedDB persistence/reload, fetch errors, CSP checks) and physical iPhone acceptance.
+4. After stability, improve staff engraving and practical section-loop practice; don't introduce unrelated features during refactors.
