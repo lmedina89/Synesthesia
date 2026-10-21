@@ -1,0 +1,16 @@
+{
+  "version": "0.9.0",
+  "sha256": "4dfe6d7e8ae1c928a7488c9ed4566148ade65bcfb143d8ca8b0b45ba3f573b42",
+  "source_units": [
+    "core/theory.js",
+    "core/notation.js",
+    "core/session.js",
+    "core/catalog.js",
+    "core/midi.js",
+    "storage/song-store.js",
+    "visual/staff-renderer.js",
+    "audio/engine.js",
+    "app.js"
+  ],
+  "notes": "Personal songs remain user-imported; no third-party MIDI files bundled"
+}

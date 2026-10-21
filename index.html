@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#100f22" />
   <meta name="description" content="Practice piano with an immersive full-screen studio, responsive iPhone audio recovery, scrolling sheet music and glowing keys. Includes kalimba." />
-  <title>Garden Notes v0.7 — Immersive Piano Practice</title>
+  <title>Garden Notes v0.9 — Music Accuracy</title>
   <style>
     :root { color-scheme: dark; --bg:#100f22; --panel:#1a1932; --panel2:#211f3c; --line:#393454; --ink:#f6f1ff; --muted:#b0a9cd; --lav:#b9a4ff; --gold:#f3c992; --good:#91dfbf; --bad:#ff9bac; --white:#fffaf2; }
     * { box-sizing:border-box; }
@@ -245,7 +245,8 @@
       #songStudio.practice-focus .song-feedback{grid-column:1/-1;grid-row:3;}
     }
     @media(max-width:400px){.focus-toolbar strong{font-size:11px}.focus-toolbar button{min-width:36px;padding:6px 8px}.focus-zoom-readout{font-size:10px}}
-  </style>
+
+</style>
 </head>
 <body>
 <main class="app">
@@ -330,69 +331,374 @@
     <div id="songStaffPanel" class="score-frame" aria-label="Scrolling treble and bass staff for the song">
       <div class="score-topline"><strong>🎼 Scrolling sheet-music guide</strong><span class="score-help">Right hand • Treble&nbsp;&nbsp; | &nbsp;&nbsp;Left hand • Bass</span></div>
       <canvas id="songStaffCanvas" class="score-canvas" aria-label="Treble and bass musical staff showing the current notes and upcoming song notes" role="img"></canvas>
-      <div class="score-footer">Notes scroll toward the gold playhead. Shows pitches and approximate note lengths from MIDI, not a publisher-engraved score.</div>
+      <div class="score-footer">Notes scroll toward the gold playhead. Shows true staff pitch positions and MIDI event timing. Staff selection and rhythmic values may be inferred; this is not an engraved score.</div>
     </div>
     <div class="song-scroll" id="songScroll" tabindex="0" aria-label="Scroll horizontally to see all 88 piano keys"><div class="song-scroll-scale" id="songScrollScale"><div class="song-scroll-inner" id="songScrollInner"><canvas id="songRoll" width="1508" height="176" aria-label="Upcoming notes falling toward the piano keys"></canvas><div id="songKeys" aria-label="Full 88-key playable song keyboard"></div></div></div></div>
     <div class="song-legend"><span>🟡 <b>Gold</b> = playing</span><span>🟢 <b>Green</b> = your next notes</span><span>🟣 <b>Purple</b> = notes you finished</span></div>
     <div class="song-feedback" id="songFeedback" aria-live="polite">Ready. Press Play to see keys light up.</div>
     <p class="song-help">Supports standard MIDI files with note data, including most piano MIDI downloads. MIDI is not an MP3 or YouTube link: audio recordings don't contain reliable individual key information. Songs with many instruments may be easier to learn by selecting a single track. The kalimba above still works; notes in its range can light up during playback too.</p>
   </section>
-  <p class="footer">v0.7 · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
+  <p class="footer">v0.9 · Music geometry and practice engine refactor · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
 </main>
 <div class="audio-recovery" id="audioRecovery" role="status" aria-live="polite" hidden><span id="audioRecoveryMessage">iPhone paused the piano audio. Tap to restore it.</span><button id="audioRestore" type="button">♫ Restore sound</button></div>
-<script>
+  <script>
 'use strict';
 (function(){
-  const $ = id => document.getElementById(id);
+
+/* core/theory.js */
+// Music theory primitives shared by the training, playback, and rendering subsystems.
+const Theory = (() => {
   const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
   const WHITE = ['C','D','E','F','G','A','B','C'];
   const BLACK_POS = [[0,'C#'],[1,'D#'],[3,'F#'],[4,'G#'],[5,'A#']];
-  const KALIMBA_ORDER = ['E6','C6','A5','F5','D5','B4','G4','E4','C4','D4','F4','A4','C5','E5','G5','B5','D6'];
-  const KALIMBA_ASC = ['C4','D4','E4','F4','G4','A4','B4','C5','D5','E5','F5','G5','A5','B5','C6','D6','E6'];
-  const DEFAULTS = {instrument:'piano',octave:4,showLabels:true,sound:true,correct:0,best:0,clef:'treble'};
-  let saved = {};
-  try {saved = JSON.parse(localStorage.getItem('garden-notes-v1')||'{}')||{};} catch(e){}
-  const state = {...DEFAULTS,...saved,mode:'explore',current:null,answered:false,streak:0,drillIndex:-1};
-  state.instrument = ['piano','kalimba'].includes(state.instrument) ? state.instrument : 'piano';
-  state.octave = Math.max(2,Math.min(6,Number(state.octave)||4));
-  state.clef = state.clef==='bass'?'bass':'treble';
+  function noteMidi(note){const m = /^([A-G]#?)(\d)$/.exec(note);return m? 12*(Number(m[2])+1)+NOTES.indexOf(m[1]):60;}
+  function midiName(n){return NOTES[n%12]+Math.floor(n/12-1);}
+  function midiSharp(n){return [1,3,6,8,10].includes(n%12);}
+  function lowerBoundSong(notes,time){let lo=0,hi=notes.length;while(lo<hi){const m=(lo+hi)>>>1;if(notes[m].start<time)lo=m+1;else hi=m;}return lo;}
+  return Object.freeze({NOTES,WHITE,BLACK_POS,noteMidi,midiName,midiSharp,lowerBoundSong});
+})();
+
+
+/* core/notation.js */
+// Pure notation geometry. Does not access the DOM, device pixels, or audio.
+// MIDI input uses scientific pitch notation C4=60 (middle C).
+const Notation = (() => {
+  const NATURAL_PITCH_CLASSES = [0,2,4,5,7,9,11];
+  const BOTTOM_LINE = Object.freeze({treble: {octave:4,letter:2},bass:{octave:2,letter:4}}); // E4, G2
+  const LINE_COUNT = 5;
+  const STAFF_LINE_SPACING = 13;
+  function spelling(midi,preferFlats=false){
+    if(!Number.isInteger(midi)||midi<0||midi>127) throw new RangeError('MIDI note must be an integer 0–127');
+    const pc=midi%12;
+    let natural=0;
+    while(natural<6&&NATURAL_PITCH_CLASSES[natural+1]<=pc)natural++;
+    let altered=pc!==NATURAL_PITCH_CLASSES[natural];
+    if(altered&&preferFlats){natural=(natural+1)%7;}
+    const letter='CDEFGAB'[natural];
+    const octave=Math.floor(midi/12)-1+(altered&&preferFlats&&natural===0?1:0);
+    return Object.freeze({letter,octave,accidental:altered?(preferFlats?'flat':'sharp'):null,
+      step:octave*7+natural, name:letter+(altered?(preferFlats?'♭':'♯'):'')+octave});
+  }
+  function position(midi,clef,bottom,spacing=STAFF_LINE_SPACING,preferFlats=false){
+    if(!BOTTOM_LINE[clef])throw new RangeError('Invalid clef');
+    const spelled=spelling(midi,preferFlats);
+    const base=BOTTOM_LINE[clef];
+    const steps=spelled.step-(base.octave*7+base.letter);
+    return Object.freeze({...spelled,clef,steps,y:bottom-steps*spacing/2});
+  }
+  function ledgerLines(pos,bottom,spacing=STAFF_LINE_SPACING){
+    // bottom line step 0, top line step +8. A ledger line exists at -2,-4,... or 10,12,...
+    const values=[];
+    if(pos.steps <= -2){for(let step=-2;step>=pos.steps;step-=2)values.push(bottom-step*spacing/2);}
+    if(pos.steps >= 10){for(let step=10;step<=pos.steps;step+=2)values.push(bottom-step*spacing/2);}
+    return values;
+  }
+  function stemDirection(pos){return pos.steps>=4?'down':'up';}
+  function assignStaff(note,tracks=[]){
+    const meta=(tracks.find(t=>t.id===note.track)?.name||'').toLowerCase();
+    if(/left|bass|lower|\blh\b/.test(meta))return 'bass';
+    if(/right|treble|upper|\brh\b|melody/.test(meta))return 'treble';
+    return note.midi>=60?'treble':'bass'; // fallback heuristic; MIDI has no staff designation
+  }
+  return Object.freeze({spelling,position,ledgerLines,stemDirection,assignStaff,STAFF_LINE_SPACING,LINE_COUNT});
+})();
+
+
+/* core/session.js */
+// Pure song/practice operations, extracted from the UI controller.
+const PracticeSession = (() => {
+  function groupedStarts(notes, tolerance=.055){
+    const groups=[];
+    for(const n of notes){
+      const previous=groups.at(-1);
+      if(previous&&Math.abs(n.start-previous.start)<tolerance){
+        if(!previous.midis.includes(n.midi))previous.midis.push(n.midi);
+      }else groups.push({start:n.start,midis:[n.midi]});
+    }
+    return groups;
+  }
+  function activePitches(notes,at,maxNoteDuration,lowerBound){
+    const lo=lowerBound(notes,at-maxNoteDuration-.01);
+    const hi=lowerBound(notes,at+.00001);
+    const found=new Set();
+    for(let i=lo;i<hi;i++){const n=notes[i];if(n.end>at)found.add(n.midi);}
+    return found;
+  }
+  function nextGroupIndex(groups,at,epsilon=.04){
+    const index=groups.findIndex(g=>g.start>=at-epsilon);
+    return index<0?groups.length:index;
+  }
+  return Object.freeze({groupedStarts,activePitches,nextGroupIndex});
+})();
+
+
+/* core/catalog.js */
+// Data-driven repertoire metadata and bundled public-domain practice exercises.
+const SongCatalog = (() => {
+  const RPG_SONGS={
+    balamb:{title:'Balamb Garden',game:'Final Fantasy VIII',source:'https://www.vgmusic.com/file/b7167903bf8deb1195e96a8b0c1eba7a.html',help:'Open the VGMusic song page and download its piano MIDI. It contains separate Right Hand and Left Hand tracks.'},
+    gods:{title:'Garden of the Gods',game:'Chrono Cross',source:'https://www.riulynrpg.info/',help:'On Riulyn’s page, find Chrono Cross → Garden of the Gods and download the MIDI from its row.'}
+  };
+  function demoSong(name){
+    const notes=[];
+    const add=(m,start,beats,track=0,velocity=92)=>notes.push({midi:m,start:start*.5,end:(start+beats)*.5,track,velocity});
+    if(name==='scale'){[60,62,64,65,67,69,71,72,71,69,67,65,64,62,60].forEach((n,i)=>add(n,i,.8));
+      return {name:'C Major Scale · warm-up',notes,tracks:[{id:0,name:'Right hand'}],duration:8,source:'demo'};}
+    if(name==='chords'){
+      [[48,52,55],[53,57,60],[55,59,62],[48,52,55]].forEach((c,i)=>c.forEach(n=>add(n,i*4,3.8,1,65)));
+      [72,74,76,79,76,74,72,67,69,72,74,72,69,67,64,60].forEach((n,i)=>add(n,i,.8,0));
+      return {name:'Chords & melody · two hands',notes,tracks:[{id:0,name:'Melody / right hand'},{id:1,name:'Chords / left hand'}],duration:8,source:'demo'};}
+    const melody=[60,60,67,67,69,69,67,65,65,64,64,62,62,60,67,67,65,65,64,64,62,67,67,65,65,64,64,62,60,60,67,67,69,69,67,65,65,64,64,62,62,60];
+    let beat=0;
+    for(let i=0;i<melody.length;i++){const beats=([6,13,20,27,34,41].includes(i)?2:1);add(melody[i],beat,beats*.85);beat+=beats;}
+    return {name:'Twinkle Twinkle Little Star',notes,tracks:[{id:0,name:'Melody'}],duration:beat*.5,source:'demo'};
+  }
+  return Object.freeze({RPG_SONGS,demoSong});
+})();
+
+
+/* core/midi.js */
+// Strict, bounded Standard MIDI File parser. Does not access the DOM.
+const Midi = (() => {
+  const SONG_FIRST=21,SONG_LAST=108;
+  function songTempoToSeconds(events,division){
+    let tempos=[{tick:0,tempo:500000}];
+    for(const e of events)if(e.type==='tempo'&&e.tick>=0)tempos.push(e);
+    tempos.sort((a,b)=>a.tick-b.tick);
+    let lastTick=0,lastSec=0,lastTempo=500000;
+    for(const t of tempos){lastSec+=(t.tick-lastTick)*lastTempo/(1000000*division);t.sec=lastSec;lastTick=t.tick;lastTempo=t.tempo;}
+    return tick=>{let left=0,right=tempos.length;
+      while(left<right){const mid=(left+right)>>1;if(tempos[mid].tick<=tick)left=mid+1;else right=mid;}
+      const t=tempos[Math.max(0,left-1)];return t.sec+(tick-t.tick)*t.tempo/(1000000*division);
+    };
+  }
+  function parseMidi(buffer,fileName){
+    const view=new DataView(buffer);let p=0;
+    const fail=msg=>{throw Error('MIDI import: '+msg);};
+    const remain=n=>{if(n<0||p+n>view.byteLength)fail('file is truncated or damaged');};
+    const u8=()=>{remain(1);return view.getUint8(p++);};
+    const u16=()=>{remain(2);const x=view.getUint16(p);p+=2;return x;};
+    const u32=()=>{remain(4);const x=view.getUint32(p);p+=4;return x;};
+    const word=()=>String.fromCharCode(u8(),u8(),u8(),u8());
+    const vlq=(limit)=>{let n=0;for(let i=0;i<4;i++){if(p>=limit)fail('invalid variable-length value');const b=u8();n=(n<<7)|(b&127);if(!(b&128))return n;}fail('invalid MIDI time value');};
+    if(word()!=='MThd')fail('not a standard .mid MIDI file');
+    const size=u32();if(size<6)fail('invalid MIDI header');const format=u16(),trackCount=u16(),division=u16();
+    if(format>1)fail('MIDI format 2 is not supported');
+    if(!division||(division&0x8000))fail('SMPTE-timed MIDI is not supported');
+    if(trackCount===0||trackCount>128)fail('invalid track count');
+    remain(size-6);p+=size-6;
+    const all=[],tracks=[];let eventCount=0;
+    for(let track=0;track<trackCount;track++){
+      if(word()!=='MTrk')fail('track header not found');const length=u32();remain(length);
+      const end=p+length;let tick=0,running=0,trackName='Track '+(track+1),channelLabel='',notes=0;
+      while(p<end){
+        if(++eventCount>200000)fail('too many MIDI events');
+        tick+=vlq(end);if(p>=end)fail('invalid track event');
+        let b=u8();if(b<128){if(running<128||running>=240)fail('invalid running status');p--;b=running;}
+        else if(b<240)running=b;
+        if(b===255){if(p>=end)fail('invalid meta event');const kind=u8(),len=vlq(end);if(p+len>end)fail('invalid meta length');
+          if(kind===81&&len===3){const t=(view.getUint8(p)<<16)|(view.getUint8(p+1)<<8)|view.getUint8(p+2);if(t>0)all.push({type:'tempo',tick,tempo:t,track});}
+          if(kind===3&&len)trackName=new TextDecoder('utf-8',{fatal:false}).decode(new Uint8Array(buffer,p,Math.min(len,120))).replace(/[\x00-\x1f]/g,' ').trim()||trackName;
+          p+=len;continue;
+        }
+        if(b===240||b===247){const len=vlq(end);if(p+len>end)fail('invalid SysEx');p+=len;running=0;continue;}
+        const op=b&240,channel=b&15,count=(op===192||op===208)?1:2;
+        if(op<128||op>224)fail('unsupported channel event');
+        if(p+count>end)fail('incomplete channel event');
+        const pitch=u8(),vel=count===2?u8():0;
+        if(op===144||op===128){if(channel!==9){all.push({type:'note',tick,track,channel,pitch,vel,down:op===144&&vel>0});notes++;channelLabel='Ch '+(channel+1);}}
+      }
+      if(p!==end)fail('bad track length');
+      tracks.push({id:track,name:trackName,notes,channel:channelLabel});
+    }
+    const secAt=songTempoToSeconds(all,division);
+    const noteEvents=all.filter(e=>e.type==='note').sort((a,b)=>a.tick-b.tick||(a.down===b.down?0:a.down?1:-1));
+    const held=new Map(),finished=[];
+    let lastTick=0;
+    for(const e of noteEvents){lastTick=Math.max(lastTick,e.tick);const key=e.track+':'+e.channel+':'+e.pitch;
+      if(e.down){if(!held.has(key))held.set(key,[]);held.get(key).push(e);}
+      else if(held.get(key)?.length){const start=held.get(key).shift();
+        if(start.pitch>=SONG_FIRST&&start.pitch<=SONG_LAST)finished.push({midi:start.pitch,start:secAt(start.tick),end:Math.max(secAt(e.tick),secAt(start.tick)+.07),track:start.track,velocity:start.vel});
+      }
+    }
+    for(const stacks of held.values())for(const start of stacks){
+      if(start.pitch>=SONG_FIRST&&start.pitch<=SONG_LAST)finished.push({midi:start.pitch,start:secAt(start.tick),end:secAt(Math.max(start.tick+division/2,lastTick)),track:start.track,velocity:start.vel});
+    }
+    const end=finished.reduce((m,n)=>Math.max(m,n.end),0);
+    if(!finished.length)fail('no playable piano notes (A0–C8) found');
+    if(end>14400)fail('song exceeds four hours');
+    return {name:fileName.replace(/\.(mid|midi)$/i,''),notes:finished,tracks:tracks.filter(t=>t.notes),duration:end,source:'MIDI'};
+  }
+  return Object.freeze({parseMidi,songTempoToSeconds});
+})();
+
+
+/* storage/song-store.js */
+// Isolated IndexedDB access; retains v0.7 keys and schema for backwards compatibility.
+const SongStorage = (() => {
+  const SONG_DB='garden-notes-library-v1',SONG_STORE='midi-songs';
+  async function songDB(){
+    if(!('indexedDB' in window))throw Error('Local song storage is not available in this browser.');
+    return await new Promise((resolve,reject)=>{
+      const request=indexedDB.open(SONG_DB,1);
+      request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(SONG_STORE))request.result.createObjectStore(SONG_STORE,{keyPath:'key'});};
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error||Error('Local song storage could not open.'));
+      request.onblocked=()=>reject(Error('Song storage is blocked by another open tab.'));
+    });
+  }
+  async function savedSong(key){
+    const db=await songDB();
+    try{return await new Promise((resolve,reject)=>{
+      const req=db.transaction(SONG_STORE,'readonly').objectStore(SONG_STORE).get(key);
+      req.onsuccess=()=>resolve(req.result||null);
+      req.onerror=()=>reject(req.error||Error('Unable to load saved MIDI.'));
+    });}finally{db.close();}
+  }
+  async function saveSong(key,filename,buffer){
+    const db=await songDB();
+    try{await new Promise((resolve,reject)=>{
+      const tx=db.transaction(SONG_STORE,'readwrite');
+      tx.objectStore(SONG_STORE).put({key,filename,buffer,savedAt:Date.now()});
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||Error('Unable to store MIDI.'));
+      tx.onabort=()=>reject(tx.error||Error('MIDI save transaction cancelled.'));
+    });}finally{db.close();}
+  }
+  async function removeSong(key){
+    const db=await songDB();
+    try{await new Promise((resolve,reject)=>{
+      const tx=db.transaction(SONG_STORE,'readwrite');
+      tx.objectStore(SONG_STORE).delete(key);
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||Error('Unable to remove stored MIDI.'));
+      tx.onabort=()=>reject(tx.error||Error('MIDI removal cancelled.'));
+    });}finally{db.close();}
+  }
+  return Object.freeze({savedSong,saveSong,removeSong});
+})();
+
+
+/* visual/staff-renderer.js */
+// Scrolling *pitch-accurate* piano staff. Screen rendering is distinct from the
+// pure Notation model, making note positions/ledger lines verifiable in tests.
+// MIDI cannot retain reliable key signatures, beaming, rests, or staff assignment.
+const StaffRenderer = (() => {
+  const {midiName,lowerBoundSong}=Theory;
+  const spacing=Notation.STAFF_LINE_SPACING;
+  const staffTop=[56,69,82,95,108],staffBass=[167,180,193,206,219];
+  const page='#fbf7ed';
+
+  function drawLedger(ctx,x,ys){
+    ctx.strokeStyle='#73657f';ctx.lineWidth=1.3;
+    for(const y of ys){ctx.beginPath();ctx.moveTo(x-12,y);ctx.lineTo(x+13,y);ctx.stroke();}
+  }
+  function drawNote(ctx,x,y,color,pos,now,showName){
+    const up=Notation.stemDirection(pos)==='up';
+    ctx.fillStyle=color;ctx.strokeStyle=color;ctx.lineWidth=1.7;
+    ctx.beginPath();ctx.ellipse(x,y,8.2,5.5,-.28,0,Math.PI*2);ctx.fill();
+    // Stems have conventional directions. Rhythmic symbols are deliberately
+    // omitted until a quantized meter/beat model can accurately supply them.
+    ctx.beginPath();
+    if(up){ctx.moveTo(x+7.2,y);ctx.lineTo(x+7.2,y-27);}
+    else{ctx.moveTo(x-7.2,y);ctx.lineTo(x-7.2,y+27);}
+    ctx.stroke();
+    if(pos.accidental){
+      ctx.font='bold 19px serif';ctx.fillText(pos.accidental==='flat'?'♭':'♯',x-22,y+6);
+    }
+    if(showName){
+      ctx.font='bold 10px system-ui';ctx.fillStyle='#145741';
+      ctx.fillText(midiName(now.midi),x-10,y-14);
+    }
+  }
+  function renderSongStaff({at,scoreCanvas,scoreContainer,song,selectedSongNotes,lastTouchedNotes,scoreLabels,stepActive,songStaffHand}){
+    if(scoreContainer.hidden)return;
+    const cssWidth=Math.max(250,scoreCanvas.clientWidth||330),cssHeight=scoreCanvas.clientHeight||255;
+    const scale=Math.min(2,window.devicePixelRatio||1);
+    const devW=Math.round(cssWidth*scale),devH=Math.round(cssHeight*scale);
+    if(scoreCanvas.width!==devW||scoreCanvas.height!==devH){scoreCanvas.width=devW;scoreCanvas.height=devH;}
+    const ctx=scoreCanvas.getContext('2d');if(!ctx)return;
+    ctx.setTransform(scale,0,0,scale,0,0);
+    const w=cssWidth,h=cssHeight,factor=h/255;
+    ctx.clearRect(0,0,w,h);ctx.fillStyle=page;ctx.fillRect(0,0,w,h);
+    ctx.save();ctx.scale(1,factor);
+    const x0=Math.min(112,Math.max(92,w*.29));const speed=w<480?70:90;
+    for(const ys of [staffTop,staffBass]){
+      ctx.strokeStyle='#8f819a';ctx.lineWidth=1;
+      for(const y of ys){ctx.beginPath();ctx.moveTo(12,y);ctx.lineTo(w-10,y);ctx.stroke();}
+    }
+    ctx.font='bold 11px system-ui';ctx.fillStyle='#675675';
+    ctx.fillText('TREBLE',15,19);ctx.fillText('BASS',15,147);
+    ctx.font='60px "Apple Symbols","Noto Music","DejaVu Sans",serif';ctx.fillStyle='#4e3b5f';
+    ctx.fillText('𝄞',12,106);
+    ctx.font='49px "Apple Symbols","Noto Music","DejaVu Sans",serif';ctx.fillText('𝄢',18,215);
+    ctx.fillStyle='#f5e2b0';ctx.fillRect(x0-3,25,6,219);
+    ctx.fillStyle='#7a5a27';ctx.font='bold 10px system-ui';ctx.fillText('NOW',x0-17,17);
+
+    const visibleBack=2.2,visibleAhead=(w-x0)/speed+.5;
+    const drawable=[];
+    if(song&&selectedSongNotes.length){
+      const from=lowerBoundSong(selectedSongNotes,at-visibleBack),to=at+visibleAhead;
+      for(let i=Math.max(0,from-15);i<selectedSongNotes.length;i++){
+        const n=selectedSongNotes[i];if(n.start>to)break;
+        if(n.end>=at-visibleBack)drawable.push(n);
+        if(drawable.length>=250)break;
+      }
+    }
+    // Draw the individual pitch placements; MIDI timing controls only horizontal
+    // spacing. Head collisions in same-time chords receive a small side shift.
+    const occupied=[];
+    for(const note of drawable){
+      const baseX=x0+(note.start-at)*speed;if(baseX<-10||baseX>w+14)continue;
+      const bass=songStaffHand(note)==='bass';const clef=bass?'bass':'treble';
+      const bottom=bass?219:108,top=bass?167:56;
+      const pos=Notation.position(note.midi,clef,bottom,spacing);
+      const active=(note.start<=at&&note.end>at)||stepActive.has(note.midi);
+      const color=active?'#21866f':bass?'#815cc1':'#387eaa';
+      let x=baseX;
+      const adjacent=occupied.find(item=>item.clef===clef&&Math.abs(item.baseX-baseX)<2&&Math.abs(item.steps-pos.steps)===1);
+      if(adjacent)x+=10;
+      occupied.push({clef,baseX,steps:pos.steps});
+      // Do not clamp notes to a wrong staff pitch. For pitches outside the
+      // physical view, show an explicit out-of-range note name instead.
+      if(pos.y<28||pos.y>243){
+        const edge=pos.y<28?28:243;
+        ctx.fillStyle=color;ctx.font='bold 11px system-ui';
+        ctx.fillText((pos.y<28?'↑ ':'↓ ')+pos.name,Math.max(5,Math.min(w-45,x)),edge);
+        continue;
+      }
+      drawLedger(ctx,x,Notation.ledgerLines(pos,bottom,spacing).filter(y=>y>=24&&y<=246));
+      // Avoid illegible overlapping names for multi-note chords; the full
+      // playable chord is listed in the dedicated Live Note readout.
+      const safeLabel=scoreLabels!=='off'&&active&&!drawable.some(other=>other!==note&&
+        Math.abs(other.start-note.start)<.03&&songStaffHand(other)===clef&&Math.abs(other.midi-note.midi)<7);
+      drawNote(ctx,x,pos.y,color,pos,note,safeLabel);
+    }
+    if(!drawable.length&&lastTouchedNotes.length){
+      for(const midi of lastTouchedNotes){
+        const bass=midi<60,bottom=bass?219:108,clef=bass?'bass':'treble';
+        const pos=Notation.position(midi,clef,bottom,spacing);
+        if(pos.y<28||pos.y>243){ctx.fillStyle='#168871';ctx.font='bold 11px system-ui';ctx.fillText((pos.y<28?'↑ ':'↓ ')+pos.name,x0+10,pos.y<28?28:243);continue;}
+        drawLedger(ctx,x0,Notation.ledgerLines(pos,bottom,spacing).filter(y=>y>=24&&y<=246));
+        drawNote(ctx,x0,pos.y,'#168871',pos,{midi},false);
+        ctx.fillStyle='#365b53';ctx.font='bold 10px system-ui';ctx.fillText(midiName(midi),x0+14,pos.y+4);
+      }
+    }
+    if(!drawable.length&&!lastTouchedNotes.length){
+      ctx.fillStyle='#897895';ctx.font='12px system-ui';
+      ctx.fillText('Play a key or start a song to see notes here.',Math.max(65,x0+18),130);
+    }
+    ctx.restore();
+  }
+  return Object.freeze({renderSongStaff});
+})();
+
+
+/* audio/engine.js */
+// Browser audio adapter, sample cache, polyphonic playback and Safari resume handling.
+function createAudioEngine({state,$,noteMidi,midiName}) {
   let audioCtx = null;
   let audioHasStarted=false, audioRecoverySerial=0;
-  let currentPool = [];
-  let nextTimer = null;
-  function persist(){try{localStorage.setItem('garden-notes-v1', JSON.stringify({instrument:state.instrument,octave:state.octave,showLabels:state.showLabels,sound:state.sound,correct:state.correct,best:state.best,clef:state.clef}));}catch(e){}}
-  function noteMidi(note){const m = /^([A-G]#?)(\d)$/.exec(note);return m? 12*(Number(m[2])+1)+NOTES.indexOf(m[1]):60;}
-  function makePool(){if(state.instrument==='kalimba')return KALIMBA_ASC.slice(); const oc=state.octave;let p=[];for(let n=0;n<=12;n++){let midi=12*(oc+1)+n;p.push(NOTES[midi%12]+Math.floor(midi/12-1));}return p;}
-  const NATURAL=['C','D','E','F','G','A','B'];
-  function readPool(){ const start = state.instrument==='piano'&&state.clef==='bass'?3:4; return NATURAL.map(n=>n+start).concat('C'+(start+1)); }
-  function syncReadRange(){
-    // Keep all notated questions inside the visible 13-key piano window.
-    if(state.mode==='read'&&state.instrument==='piano'){
-      state.octave=state.clef==='bass'?3:4;
-      renderPiano();
-      $('octaveText').textContent='C'+state.octave+'–C'+(state.octave+1);
-    }
-    $('octaveDown').disabled=state.mode==='read'||state.octave<=2;
-    $('octaveUp').disabled=state.mode==='read'||state.octave>=6;
-    persist();
-  }
-  function drawStaff(note){
-    const clef=state.instrument==='kalimba'?'treble':state.clef;
-    const bottomIndex=clef==='treble'?4*7+2:2*7+4; // bottom line E4 or G2
-    const m=/^([A-G])(\d)$/.exec(note);
-    if(!m)return;
-    const position=Number(m[2])*7+NATURAL.indexOf(m[1]);
-    const y=92-(position-bottomIndex)*8;
-    const lines=[28,44,60,76,92].map(ly=>`<line x1="35" x2="278" y1="${ly}" y2="${ly}" stroke="#bfb3da" stroke-width="1.8"/>`).join('');
-    const ledger=[];
-    if(y>92)for(let ly=108;ly<=y;ly+=16)ledger.push(ly);
-    if(y<28)for(let ly=12;ly>=y;ly-=16)ledger.push(ly);
-    const extras=ledger.map(ly=>`<line x1="143" x2="185" y1="${ly}" y2="${ly}" stroke="#bfb3da" stroke-width="1.8"/>`).join('');
-    const stem=y>=60?`<line x1="176" x2="176" y1="${y}" y2="${y-47}" stroke="#dec8ff" stroke-width="2.4"/>`:`<line x1="152" x2="152" y1="${y}" y2="${y+47}" stroke="#dec8ff" stroke-width="2.4"/>`;
-    $('staffScore').innerHTML=lines+extras+`<text x="43" y="120" font-size="14" fill="#c9b9ef">${clef==='treble'?'Treble':'Bass'}</text>`+stem+`<ellipse cx="164" cy="${y}" rx="13" ry="8.2" transform="rotate(-18 164 ${y})" fill="#c3a6ff" stroke="#f8ebff" stroke-width="1.7"/>`;
-    $('staffScore').setAttribute('aria-label','A mystery note on the '+clef+' staff');
-    $('staffCaption').textContent=clef==='treble'?'Treble: lines E G B D F, bottom to top':'Bass: lines G B D F A, bottom to top';
-  }
   // Real Yamaha C5 grand-piano recordings, Salamander Grand Piano V3
   // by Alexander Holm, licensed CC BY 3.0 (see README and LICENSE_SAMPLES.md).
   // Reusing a small subset of the sample naming scheme hosted by Tone.js.
@@ -403,7 +709,7 @@
   const sampleBuffers=new Map(), sampleRequests=new Map();
   let sampleFailCount=0;
   function audioContext(){
-    if(!audioCtx||audioCtx.state==='closed'){const AudioCtor=window.AudioContext||window.webkitAudioContext;if(!AudioCtor)throw Error('Web Audio not supported');audioCtx=new AudioCtor();audioCtx.addEventListener?.('statechange',()=>{if(audioHasStarted&&!document.hidden)syncAudioGate();});}
+    if(!audioCtx||audioCtx.state==='closed'){const AudioCtor=window.AudioContext||/** @type {any} */(window).webkitAudioContext;if(!AudioCtor)throw Error('Web Audio not supported');audioCtx=new AudioCtor();audioCtx.addEventListener?.('statechange',()=>{if(audioHasStarted&&!document.hidden)syncAudioGate();});}
     return audioCtx;
   }
   // Safari can suspend or interrupt WebAudio when leaving the app. Never claim
@@ -516,6 +822,7 @@
     master.gain.exponentialRampToValueAtTime(kal?.125:.10,now+(kal?.008:.017));
     master.gain.exponentialRampToValueAtTime(.0001,now+(kal?1.45:1.8));
     master.connect(ctx.destination);
+    /** @type {Array<[number,number,OscillatorType]>} */
     const partials=kal?[[1,1,'sine'],[2.02,.36,'sine'],[3.9,.09,'sine']]:[[1,1,'triangle'],[2,.18,'sine'],[3,.07,'sine']];
     for(const [mult,vol,wave] of partials){
       const osc=ctx.createOscillator(),gain=ctx.createGain();
@@ -534,6 +841,85 @@
         preloadPianoOctave();
       }
     }catch(e){ /* Keep visual trainer available if audio is disabled or unsupported. */ }
+  }
+  const songVoices=new Set();
+  // A scheduled note uses the recorded grand sample when available and respects a song note's length.
+  function soundMidi(n,duration=.35,velocity=90){if(!state.sound)return;
+    try{const ctx=resumeAudio();if(!ctx)return;
+      const name=closestSample(n),buffer=sampleBuffers.get(name),now=ctx.currentTime;
+      if(!buffer){playSynth(midiName(n),false);loadSample(name).catch(()=>{});return;}
+      const src=ctx.createBufferSource(),gain=ctx.createGain();src.buffer=buffer;
+      src.playbackRate.value=Math.pow(2,(n-noteMidi(name))/12);
+      const volume=Math.min(.27,Math.max(.045,velocity/127*.23));
+      gain.gain.setValueAtTime(.0001,now);gain.gain.linearRampToValueAtTime(volume,now+.014);
+      const release=Math.max(.1,Math.min(duration,5));gain.gain.setValueAtTime(volume,now+release);
+      gain.gain.exponentialRampToValueAtTime(.0001,now+release+.22);
+      src.connect(gain);gain.connect(ctx.destination);src.onended=()=>songVoices.delete(src);
+      songVoices.add(src);src.start(now);src.stop(now+release+.25);
+    }catch(e){}
+  }
+  function preloadSongSamples(songNotes){if(!state.sound||!songNotes?.length)return;
+    const unique=[...new Set(songNotes.map(n=>closestSample(n.midi)))];
+    for(const name of unique){if(!sampleBuffers.has(name))loadSample(name).catch(()=>{});}
+  }
+  function stopSongVoices(){for(const voice of songVoices){try{voice.stop();}catch(e){}}songVoices.clear();}
+  function retrySamples(){sampleFailCount=0;resumeAudio();preloadPianoOctave();updateAudioStatus();}
+  return Object.freeze({syncAudioGate,resumeAudio,restoreAudio,ensureAudioReady,preloadPianoOctave,updateAudioStatus,preloadSongSamples,playNote,soundMidi,stopSongVoices,retrySamples});
+}
+
+
+/* app.js */
+// DOM orchestration and application state; gradually migrate UI subsystems here.
+  const $ = id => document.getElementById(id);
+  const KALIMBA_ORDER = ['E6','C6','A5','F5','D5','B4','G4','E4','C4','D4','F4','A4','C5','E5','G5','B5','D6'];
+  const KALIMBA_ASC = ['C4','D4','E4','F4','G4','A4','B4','C5','D5','E5','F5','G5','A5','B5','C6','D6','E6'];
+  const DEFAULTS = {instrument:'piano',octave:4,showLabels:true,sound:true,correct:0,best:0,clef:'treble'};
+  let saved = {};
+  try {saved = JSON.parse(localStorage.getItem('garden-notes-v1')||'{}')||{};} catch(e){}
+  const state = {...DEFAULTS,...saved,mode:'explore',current:null,answered:false,streak:0,drillIndex:-1};
+  state.instrument = ['piano','kalimba'].includes(state.instrument) ? state.instrument : 'piano';
+  state.octave = Math.max(2,Math.min(6,Number(state.octave)||4));
+  state.clef = state.clef==='bass'?'bass':'treble';
+  const {NOTES,WHITE,BLACK_POS,noteMidi,midiName,midiSharp,lowerBoundSong}=Theory;
+  const {RPG_SONGS,demoSong}=SongCatalog;
+  const {parseMidi}=Midi;
+  const {savedSong,saveSong,removeSong}=SongStorage;
+  let librarySelectionSerial=0;
+  const audio=createAudioEngine({state,$,noteMidi,midiName});
+  const {syncAudioGate,resumeAudio,restoreAudio,ensureAudioReady,preloadPianoOctave,updateAudioStatus,preloadSongSamples,playNote,soundMidi,stopSongVoices,retrySamples}=audio;
+  let currentPool = [];
+  let nextTimer = null;
+  function persist(){try{localStorage.setItem('garden-notes-v1', JSON.stringify({instrument:state.instrument,octave:state.octave,showLabels:state.showLabels,sound:state.sound,correct:state.correct,best:state.best,clef:state.clef}));}catch(e){}}
+  function makePool(){if(state.instrument==='kalimba')return KALIMBA_ASC.slice(); const oc=state.octave;let p=[];for(let n=0;n<=12;n++){let midi=12*(oc+1)+n;p.push(NOTES[midi%12]+Math.floor(midi/12-1));}return p;}
+  const NATURAL=['C','D','E','F','G','A','B'];
+  function readPool(){ const start = state.instrument==='piano'&&state.clef==='bass'?3:4; return NATURAL.map(n=>n+start).concat('C'+(start+1)); }
+  function syncReadRange(){
+    // Keep all notated questions inside the visible 13-key piano window.
+    if(state.mode==='read'&&state.instrument==='piano'){
+      state.octave=state.clef==='bass'?3:4;
+      renderPiano();
+      $('octaveText').textContent='C'+state.octave+'–C'+(state.octave+1);
+    }
+    $('octaveDown').disabled=state.mode==='read'||state.octave<=2;
+    $('octaveUp').disabled=state.mode==='read'||state.octave>=6;
+    persist();
+  }
+  function drawStaff(note){
+    const clef=state.instrument==='kalimba'?'treble':state.clef;
+    const bottomIndex=clef==='treble'?4*7+2:2*7+4; // bottom line E4 or G2
+    const m=/^([A-G])(\d)$/.exec(note);
+    if(!m)return;
+    const position=Number(m[2])*7+NATURAL.indexOf(m[1]);
+    const y=92-(position-bottomIndex)*8;
+    const lines=[28,44,60,76,92].map(ly=>`<line x1="35" x2="278" y1="${ly}" y2="${ly}" stroke="#bfb3da" stroke-width="1.8"/>`).join('');
+    const ledger=[];
+    if(y>92)for(let ly=108;ly<=y;ly+=16)ledger.push(ly);
+    if(y<28)for(let ly=12;ly>=y;ly-=16)ledger.push(ly);
+    const extras=ledger.map(ly=>`<line x1="143" x2="185" y1="${ly}" y2="${ly}" stroke="#bfb3da" stroke-width="1.8"/>`).join('');
+    const stem=y>=60?`<line x1="176" x2="176" y1="${y}" y2="${y-47}" stroke="#dec8ff" stroke-width="2.4"/>`:`<line x1="152" x2="152" y1="${y}" y2="${y+47}" stroke="#dec8ff" stroke-width="2.4"/>`;
+    $('staffScore').innerHTML=lines+extras+`<text x="43" y="120" font-size="14" fill="#c9b9ef">${clef==='treble'?'Treble':'Bass'}</text>`+stem+`<ellipse cx="164" cy="${y}" rx="13" ry="8.2" transform="rotate(-18 164 ${y})" fill="#c3a6ff" stroke="#f8ebff" stroke-width="1.7"/>`;
+    $('staffScore').setAttribute('aria-label','A mystery note on the '+clef+' staff');
+    $('staffCaption').textContent=clef==='treble'?'Treble: lines E G B D F, bottom to top':'Bass: lines G B D F A, bottom to top';
   }
   function flash(note,kind='playing'){
     const nodes=document.querySelectorAll('[data-note="'+note+'"]');
@@ -613,50 +999,6 @@
   try{PACKED_SONGS=JSON.parse($('private-song-pack')?.textContent||'{}')||{};}catch(e){PACKED_SONGS={};}
   function bufferFromBase64(base64){const binary=atob(base64);const arr=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)arr[i]=binary.charCodeAt(i);return arr.buffer;}
   function bufferToBase64(data){const bytes=new Uint8Array(data),size=8192;let s='';for(let i=0;i<bytes.length;i+=size)s+=String.fromCharCode(...bytes.subarray(i,i+size));return btoa(s);}
-  const RPG_SONGS={
-    balamb:{title:'Balamb Garden',game:'Final Fantasy VIII',source:'https://www.vgmusic.com/file/b7167903bf8deb1195e96a8b0c1eba7a.html',help:'Open the VGMusic song page and download its piano MIDI. It contains separate Right Hand and Left Hand tracks.'},
-    gods:{title:'Garden of the Gods',game:'Chrono Cross',source:'https://www.riulynrpg.info/',help:'On Riulyn’s page, find Chrono Cross → Garden of the Gods and download the MIDI from its row.'}
-  };
-  const SONG_DB='garden-notes-library-v1',SONG_STORE='midi-songs';
-  let librarySelectionSerial=0;
-  async function songDB(){
-    if(!('indexedDB' in window))throw Error('Local song storage is not available in this browser.');
-    return await new Promise((resolve,reject)=>{
-      const request=indexedDB.open(SONG_DB,1);
-      request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(SONG_STORE))request.result.createObjectStore(SONG_STORE,{keyPath:'key'});};
-      request.onsuccess=()=>resolve(request.result);
-      request.onerror=()=>reject(request.error||Error('Local song storage could not open.'));
-      request.onblocked=()=>reject(Error('Song storage is blocked by another open tab.'));
-    });
-  }
-  async function savedSong(key){
-    const db=await songDB();
-    try{return await new Promise((resolve,reject)=>{
-      const req=db.transaction(SONG_STORE,'readonly').objectStore(SONG_STORE).get(key);
-      req.onsuccess=()=>resolve(req.result||null);
-      req.onerror=()=>reject(req.error||Error('Unable to load saved MIDI.'));
-    });}finally{db.close();}
-  }
-  async function saveSong(key,filename,buffer){
-    const db=await songDB();
-    try{await new Promise((resolve,reject)=>{
-      const tx=db.transaction(SONG_STORE,'readwrite');
-      tx.objectStore(SONG_STORE).put({key,filename,buffer,savedAt:Date.now()});
-      tx.oncomplete=()=>resolve();
-      tx.onerror=()=>reject(tx.error||Error('Unable to store MIDI.'));
-      tx.onabort=()=>reject(tx.error||Error('MIDI save transaction cancelled.'));
-    });}finally{db.close();}
-  }
-  async function removeSong(key){
-    const db=await songDB();
-    try{await new Promise((resolve,reject)=>{
-      const tx=db.transaction(SONG_STORE,'readwrite');
-      tx.objectStore(SONG_STORE).delete(key);
-      tx.oncomplete=()=>resolve();
-      tx.onerror=()=>reject(tx.error||Error('Unable to remove stored MIDI.'));
-      tx.onabort=()=>reject(tx.error||Error('MIDI removal cancelled.'));
-    });}finally{db.close();}
-  }
   function showLibraryControls(key,installed=false,embedded=false){
     const meta=RPG_SONGS[key];
     $('songLibraryActions').hidden=!meta;
@@ -716,8 +1058,6 @@
   let songActive=new Set(),selectedSongNotes=[],songMaxDuration=0;
   const songKeys=new Map();
   const songUi={scroll:$('songScroll'),canvas:$('songRoll'),keys:$('songKeys')};
-  function midiName(n){return NOTES[n%12]+Math.floor(n/12-1);}
-  function midiSharp(n){return [1,3,6,8,10].includes(n%12);}
   function pianoX(n){
     let whites=0;
     for(let i=SONG_FIRST;i<n;i++)if(!midiSharp(i))whites++;
@@ -748,76 +1088,11 @@
     $('liveNoteDetail').innerHTML=lastTouchedNotes.length?(lastTouchedNotes.length>1?'<b>Chord / multiple notes</b>':'<b>'+ (lastTouchedNotes[0]===60?'Middle C · ':'')+'Note played</b>')+' · '+lastTouchedNotes.map(n=>midiSharp(n)?midiName(n).replace('#','♯')+' / '+NOTES[(n+1)%12]+'♭'+Math.floor(n/12-1):midiName(n)).join(' · '):'Press any piano key to identify it.';
     renderSongStaff(songPosition);
   }
-  function songStaffHand(note){
-    const meta=song?.tracks?.find(t=>t.id===note.track)?.name?.toLowerCase()||'';
-    if(/left|bass|lower|lh\b/.test(meta))return 'bass';
-    if(/right|treble|upper|rh\b|melody/.test(meta))return 'treble';
-    return note.midi>=60?'treble':'bass';
-  }
-  function scorePitch(n,clef,bottom){
-    const natural=[0,2,4,5,7,9,11];const pc=n%12;
-    let k=0;for(let i=0;i<7;i++)if(natural[i]<=pc)k=i;
-    const diatonic=(Math.floor(n/12)-1)*7+k;
-    const anchor=clef==='treble'?(4*7+2):(2*7+4); // E4 or G2
-    return {y:bottom-(diatonic-anchor)*6,sharp:natural[k]!==pc};
-  }
+  function songStaffHand(note){return Notation.assignStaff(note,song?.tracks||[]);}
   function renderSongStaff(at=songPosition){
-    if(scoreContainer.hidden)return;
-    const cssWidth=Math.max(250,scoreCanvas.clientWidth||330),cssHeight=scoreCanvas.clientHeight||255;
-    const scale=Math.min(2,window.devicePixelRatio||1);
-    const devW=Math.round(cssWidth*scale),devH=Math.round(cssHeight*scale);
-    if(scoreCanvas.width!==devW||scoreCanvas.height!==devH){scoreCanvas.width=devW;scoreCanvas.height=devH;}
-    const ctx=scoreCanvas.getContext('2d');if(!ctx)return;ctx.setTransform(scale,0,0,scale,0,0);
-    const w=cssWidth,h=cssHeight,factor=h/255;
-    ctx.clearRect(0,0,w,h);ctx.fillStyle='#fbf7ed';ctx.fillRect(0,0,w,h);
-    ctx.save();ctx.scale(1,factor);
-    const x0=Math.min(112,Math.max(92,w*.29));const speed=w<480?70:90;
-    const staffTop=[56,69,82,95,108], staffBass=[167,180,193,206,219];
-    for(const ys of [staffTop,staffBass]){ctx.strokeStyle='#8f819a';ctx.lineWidth=1;
-      for(const yy of ys){ctx.beginPath();ctx.moveTo(12,yy);ctx.lineTo(w-10,yy);ctx.stroke();}}
-    ctx.font='bold 11px system-ui';ctx.fillStyle='#675675';ctx.fillText('TREBLE',15,19);ctx.fillText('BASS',15,147);
-    // Clef ornaments plus text fallback keep the view legible on devices missing notation fonts.
-    ctx.font='60px "Apple Symbols","Noto Music","DejaVu Sans",serif';ctx.fillStyle='#4e3b5f';
-    ctx.fillText('𝄞',12,106);ctx.font='49px "Apple Symbols","Noto Music","DejaVu Sans",serif';ctx.fillText('𝄢',18,215);
-    // Current-time marker stays fixed; music moves behind it.
-    ctx.fillStyle='#f5e2b0';ctx.fillRect(x0-3,25,6,219);ctx.fillStyle='#7a5a27';ctx.font='bold 10px system-ui';ctx.fillText('NOW',x0-17,17);
-    const visibleBack=2.2,visibleAhead=(w-x0)/speed+.5;
-    let drawable=[];
-    if(song&&selectedSongNotes.length){
-      const from=lowerBoundSong(selectedSongNotes,at-visibleBack), to=at+visibleAhead;
-      for(let i=Math.max(0,from-15);i<selectedSongNotes.length;i++){
-        const n=selectedSongNotes[i];if(n.start>to)break;
-        if(n.end>=at-visibleBack)drawable.push(n);
-        if(drawable.length>250)break;
-      }
-    }
-    for(const note of drawable){
-      const x=x0+(note.start-at)*speed;if(x<-10||x>w+14)continue;
-      const isBass=songStaffHand(note)==='bass';const clef=isBass?'bass':'treble';
-      const low=isBass?219:108,top=isBass?167:56;
-      const pitch=scorePitch(note.midi,clef,low);
-      // Limit exotic out-of-staff pitches to maintain a useful readable view.
-      const y=Math.max(top-28,Math.min(low+24,pitch.y));
-      const playing=note.start<=at&&note.end>at;
-      const active=playing||$('songMode').value==='step'&&songPlaying&&songGroups[songGroupIndex]?.midis.includes(note.midi);
-      const color=active?'#21866f':isBass?'#815cc1':'#387eaa';
-      if(y>low)for(let yy=low+13;yy<=y+2;yy+=13){ctx.strokeStyle='#756783';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(x-12,yy);ctx.lineTo(x+13,yy);ctx.stroke();}
-      if(y<top)for(let yy=top-13;yy>=y-2;yy-=13){ctx.strokeStyle='#756783';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(x-12,yy);ctx.lineTo(x+13,yy);ctx.stroke();}
-      if(pitch.sharp){ctx.fillStyle=color;ctx.font='bold 19px serif';ctx.fillText('♯',x-21,y+7);}
-      const duration=Math.max(.06,note.end-note.start);
-      ctx.fillStyle=color;ctx.strokeStyle=color;ctx.lineWidth=1.6;
-      ctx.beginPath();ctx.ellipse(x,y,8.3,5.8,-.3,0,Math.PI*2);
-      if(duration>.95){ctx.fillStyle='#fbf7ed';ctx.fill();ctx.stroke();}else ctx.fill();
-      ctx.beginPath();ctx.moveTo(x+7.5,y);ctx.lineTo(x+7.5,y-28);ctx.stroke();
-      if(duration<.35){ctx.beginPath();ctx.moveTo(x+7,y-28);ctx.quadraticCurveTo(x+22,y-20,x+14,y-8);ctx.stroke();}
-      if(scoreLabels!=='off'&&active){ctx.font='bold 10px system-ui';ctx.fillStyle='#135741';ctx.fillText(midiName(note.midi),x-11,y-13);}
-    }
-    if(!drawable.length&&lastTouchedNotes.length){
-      for(const n of lastTouchedNotes){const bass=n<60,low=bass?219:108,top=bass?167:56,p=scorePitch(n,bass?'bass':'treble',low);const y=Math.max(top-28,Math.min(low+24,p.y));
-        ctx.fillStyle='#168871';ctx.beginPath();ctx.ellipse(x0,y,9,6,-.25,0,Math.PI*2);ctx.fill();ctx.fillStyle='#365b53';ctx.font='bold 10px system-ui';ctx.fillText(midiName(n),x0+14,y+4);}
-    }
-    if(!drawable.length&&!lastTouchedNotes.length){ctx.fillStyle='#897895';ctx.font='12px system-ui';ctx.fillText('Play a key or start a song to see notes here.',Math.max(65,x0+18),130);}
-    ctx.restore();
+    const stepActive = $('songMode').value==='step'&&songPlaying
+      ? new Set(songGroups[songGroupIndex]?.midis||[]) : new Set();
+    StaffRenderer.renderSongStaff({at,scoreCanvas,scoreContainer,song,selectedSongNotes,lastTouchedNotes,scoreLabels,stepActive,songStaffHand});
   }
   window.addEventListener('resize',()=>renderSongStaff(songPosition),{passive:true});
 
@@ -846,90 +1121,7 @@
     }});
     button.addEventListener('click',e=>{if(e.detail===0)handleSongKey(n);});
   }
-  function songTempoToSeconds(events,division){
-    let tempos=[{tick:0,tempo:500000}];
-    for(const e of events)if(e.type==='tempo'&&e.tick>=0)tempos.push(e);
-    tempos.sort((a,b)=>a.tick-b.tick);
-    let lastTick=0,lastSec=0,lastTempo=500000;
-    for(const t of tempos){lastSec+=(t.tick-lastTick)*lastTempo/(1000000*division);t.sec=lastSec;lastTick=t.tick;lastTempo=t.tempo;}
-    return tick=>{let left=0,right=tempos.length;
-      while(left<right){const mid=(left+right)>>1;if(tempos[mid].tick<=tick)left=mid+1;else right=mid;}
-      const t=tempos[Math.max(0,left-1)];return t.sec+(tick-t.tick)*t.tempo/(1000000*division);
-    };
-  }
-  function parseMidi(buffer,fileName){
-    const view=new DataView(buffer);let p=0;
-    const fail=msg=>{throw Error('MIDI import: '+msg);};
-    const remain=n=>{if(n<0||p+n>view.byteLength)fail('file is truncated or damaged');};
-    const u8=()=>{remain(1);return view.getUint8(p++);};
-    const u16=()=>{remain(2);const x=view.getUint16(p);p+=2;return x;};
-    const u32=()=>{remain(4);const x=view.getUint32(p);p+=4;return x;};
-    const word=()=>String.fromCharCode(u8(),u8(),u8(),u8());
-    const vlq=(limit)=>{let n=0;for(let i=0;i<4;i++){if(p>=limit)fail('invalid variable-length value');const b=u8();n=(n<<7)|(b&127);if(!(b&128))return n;}fail('invalid MIDI time value');};
-    if(word()!=='MThd')fail('not a standard .mid MIDI file');
-    const size=u32();if(size<6)fail('invalid MIDI header');const format=u16(),trackCount=u16(),division=u16();
-    if(format>1)fail('MIDI format 2 is not supported');
-    if(!division||(division&0x8000))fail('SMPTE-timed MIDI is not supported');
-    if(trackCount===0||trackCount>128)fail('invalid track count');
-    remain(size-6);p+=size-6;
-    const all=[],tracks=[];let eventCount=0;
-    for(let track=0;track<trackCount;track++){
-      if(word()!=='MTrk')fail('track header not found');const length=u32();remain(length);
-      const end=p+length;let tick=0,running=0,trackName='Track '+(track+1),channelLabel='',notes=0;
-      while(p<end){
-        if(++eventCount>200000)fail('too many MIDI events');
-        tick+=vlq(end);if(p>=end)fail('invalid track event');
-        let b=u8();if(b<128){if(running<128||running>=240)fail('invalid running status');p--;b=running;}
-        else if(b<240)running=b;
-        if(b===255){if(p>=end)fail('invalid meta event');const kind=u8(),len=vlq(end);if(p+len>end)fail('invalid meta length');
-          if(kind===81&&len===3){const t=(view.getUint8(p)<<16)|(view.getUint8(p+1)<<8)|view.getUint8(p+2);if(t>0)all.push({type:'tempo',tick,tempo:t,track});}
-          if(kind===3&&len)trackName=new TextDecoder('utf-8',{fatal:false}).decode(new Uint8Array(buffer,p,Math.min(len,120))).replace(/[\x00-\x1f]/g,' ').trim()||trackName;
-          p+=len;continue;
-        }
-        if(b===240||b===247){const len=vlq(end);if(p+len>end)fail('invalid SysEx');p+=len;running=0;continue;}
-        const op=b&240,channel=b&15,count=(op===192||op===208)?1:2;
-        if(op<128||op>224)fail('unsupported channel event');
-        if(p+count>end)fail('incomplete channel event');
-        const pitch=u8(),vel=count===2?u8():0;
-        if(op===144||op===128){if(channel!==9){all.push({type:'note',tick,track,channel,pitch,vel,down:op===144&&vel>0});notes++;channelLabel='Ch '+(channel+1);}}
-      }
-      if(p!==end)fail('bad track length');
-      tracks.push({id:track,name:trackName,notes,channel:channelLabel});
-    }
-    const secAt=songTempoToSeconds(all,division);
-    const noteEvents=all.filter(e=>e.type==='note').sort((a,b)=>a.tick-b.tick||(a.down===b.down?0:a.down?1:-1));
-    const held=new Map(),finished=[];
-    let lastTick=0;
-    for(const e of noteEvents){lastTick=Math.max(lastTick,e.tick);const key=e.track+':'+e.channel+':'+e.pitch;
-      if(e.down){if(!held.has(key))held.set(key,[]);held.get(key).push(e);}
-      else if(held.get(key)?.length){const start=held.get(key).shift();
-        if(start.pitch>=SONG_FIRST&&start.pitch<=SONG_LAST)finished.push({midi:start.pitch,start:secAt(start.tick),end:Math.max(secAt(e.tick),secAt(start.tick)+.07),track:start.track,velocity:start.vel});
-      }
-    }
-    for(const stacks of held.values())for(const start of stacks){
-      if(start.pitch>=SONG_FIRST&&start.pitch<=SONG_LAST)finished.push({midi:start.pitch,start:secAt(start.tick),end:secAt(Math.max(start.tick+division/2,lastTick)),track:start.track,velocity:start.vel});
-    }
-    const end=finished.reduce((m,n)=>Math.max(m,n.end),0);
-    if(!finished.length)fail('no playable piano notes (A0–C8) found');
-    if(end>14400)fail('song exceeds four hours');
-    return {name:fileName.replace(/\.(mid|midi)$/i,''),notes:finished,tracks:tracks.filter(t=>t.notes),duration:end,source:'MIDI'};
-  }
-  function demoSong(name){
-    const notes=[];
-    const add=(m,start,beats,track=0,velocity=92)=>notes.push({midi:m,start:start*.5,end:(start+beats)*.5,track,velocity});
-    if(name==='scale'){[60,62,64,65,67,69,71,72,71,69,67,65,64,62,60].forEach((n,i)=>add(n,i,.8));
-      return {name:'C Major Scale · warm-up',notes,tracks:[{id:0,name:'Right hand'}],duration:8,source:'demo'};}
-    if(name==='chords'){
-      [[48,52,55],[53,57,60],[55,59,62],[48,52,55]].forEach((c,i)=>c.forEach(n=>add(n,i*4,3.8,1,65)));
-      [72,74,76,79,76,74,72,67,69,72,74,72,69,67,64,60].forEach((n,i)=>add(n,i,.8,0));
-      return {name:'Chords & melody · two hands',notes,tracks:[{id:0,name:'Melody / right hand'},{id:1,name:'Chords / left hand'}],duration:8,source:'demo'};}
-    const melody=[60,60,67,67,69,69,67,65,65,64,64,62,62,60,67,67,65,65,64,64,62,67,67,65,65,64,64,62,60,60,67,67,69,69,67,65,65,64,64,62,62,60];
-    let beat=0;
-    for(let i=0;i<melody.length;i++){const beats=([6,13,20,27,34,41].includes(i)?2:1);add(melody[i],beat,beats*.85);beat+=beats;}
-    return {name:'Twinkle Twinkle Little Star',notes,tracks:[{id:0,name:'Melody'}],duration:beat*.5,source:'demo'};
-  }
   function scopedNotes(){return selectedSongNotes;}
-  function lowerBoundSong(notes,time){let lo=0,hi=notes.length;while(lo<hi){const m=(lo+hi)>>>1;if(notes[m].start<time)lo=m+1;else hi=m;}return lo;}
   let songNotes=[];
   function setSong(loaded){
     stopSong();song=loaded;
@@ -939,20 +1131,11 @@
     options.value='all';songPosition=0;
     buildSongGroups();setSongPosition(0);$('songTitle').textContent=song.name;
     $('songFeedback').textContent=(song.source==='MIDI'?'MIDI imported · ':'Demo ready · ')+songNotes.length+' notes. Choose Watch or Wait for my notes.';
-    preloadSongSamples();updateSongButtons();
+    preloadSongSamples(songNotes);updateSongButtons();
   }
   function buildSongGroups(){const track=$('songTrack').value;selectedSongNotes=songNotes.filter(n=>track==='all'||String(n.track)===track);
     songMaxDuration=selectedSongNotes.reduce((m,n)=>Math.max(m,n.end-n.start),0);
-    const notes=scopedNotes();songGroups=[];
-    for(const n of notes){const last=songGroups.at(-1);
-      if(last&&Math.abs(n.start-last.start)<.055){if(!last.midis.includes(n.midi))last.midis.push(n.midi);}
-      else songGroups.push({start:n.start,midis:[n.midi]});
-    }
-    songGroupIndex=0;songGroupDone.clear();
-  }
-  function preloadSongSamples(){if(!state.sound||!song)return;
-    const unique=[...new Set(songNotes.map(n=>closestSample(n.midi)))];
-    for(const name of unique){if(!sampleBuffers.has(name))loadSample(name).catch(()=>{});}
+    songGroups=PracticeSession.groupedStarts(scopedNotes());songGroupIndex=0;songGroupDone.clear();
   }
   function fmtTime(t){const s=Math.max(0,Math.floor(t));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
   function updateSongButtons(){const stepping=$('songMode').value==='step';
@@ -998,10 +1181,8 @@
     });
   }
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&focusActive){exitFocus();e.preventDefault();}});
-  const songVoices=new Set();
   function stopSong(){songPlaying=false;cancelAnimationFrame(songAnimation);songAnimation=0;
-    for(const voice of songVoices){try{voice.stop();}catch(e){}}
-    songVoices.clear();
+    stopSongVoices();
     updateSongButtons();songActive.clear();renderSongHighlights();}
   function setSongPosition(time){if(!song)return;
     songPosition=Math.max(0,Math.min(song.duration,time));
@@ -1012,27 +1193,9 @@
     songActive=activeSongPitches(p);
     drawSongRoll(p);renderSongHighlights();renderSongStaff(p);
   }
-  function activeSongPitches(at){
-    const lo=lowerBoundSong(selectedSongNotes,at-songMaxDuration-.01),hi=lowerBoundSong(selectedSongNotes,at+.00001);
-    const found=new Set();for(let i=lo;i<hi;i++){const n=selectedSongNotes[i];if(n.end>at)found.add(n.midi);}return found;
-  }
+  function activeSongPitches(at){return PracticeSession.activePitches(selectedSongNotes,at,songMaxDuration,lowerBoundSong);}
   function seekSong(time){stopSong();setSongPosition(time);
-    if($('songMode').value==='step'){buildSongGroups();songGroupIndex=songGroups.findIndex(g=>g.start>=songPosition-.04);if(songGroupIndex<0)songGroupIndex=songGroups.length;renderSongHighlights();}
-  }
-  // A scheduled note uses the recorded grand sample when available and respects a song note's length.
-  function soundMidi(n,duration=.35,velocity=90){if(!state.sound)return;
-    try{const ctx=resumeAudio();if(!ctx)return;
-      const name=closestSample(n),buffer=sampleBuffers.get(name),now=ctx.currentTime;
-      if(!buffer){playSynth(midiName(n),false);loadSample(name).catch(()=>{});return;}
-      const src=ctx.createBufferSource(),gain=ctx.createGain();src.buffer=buffer;
-      src.playbackRate.value=Math.pow(2,(n-noteMidi(name))/12);
-      const volume=Math.min(.27,Math.max(.045,velocity/127*.23));
-      gain.gain.setValueAtTime(.0001,now);gain.gain.linearRampToValueAtTime(volume,now+.014);
-      const release=Math.max(.1,Math.min(duration,5));gain.gain.setValueAtTime(volume,now+release);
-      gain.gain.exponentialRampToValueAtTime(.0001,now+release+.22);
-      src.connect(gain);gain.connect(ctx.destination);src.onended=()=>songVoices.delete(src);
-      songVoices.add(src);src.start(now);src.stop(now+release+.25);
-    }catch(e){}
+    if($('songMode').value==='step'){buildSongGroups();songGroupIndex=PracticeSession.nextGroupIndex(songGroups,songPosition);renderSongHighlights();}
   }
   function focusSongKeys(midis,force=false){if(!midis.length)return;
     const center=midis.reduce((total,n)=>total+pianoX(n),0)/midis.length*(focusActive?focusZoom:1);
@@ -1106,12 +1269,12 @@
       $('songFeedback').textContent='Sound is paused by the browser. Tap Restore sound, then press Play.';
       return;
     }
-    preloadSongSamples();
+    preloadSongSamples(songNotes);
     if(songPosition>=song.duration)seekSong(0);
     songPlaying=true;
     if($('songMode').value==='step'){
-      songGroupIndex=songGroups.findIndex(g=>g.start>=songPosition-.04);
-      if(songGroupIndex<0)songGroupIndex=0;
+      songGroupIndex=PracticeSession.nextGroupIndex(songGroups,songPosition);
+      if(songGroupIndex>=songGroups.length)songGroupIndex=0;
       songGroupDone.clear();songPosition=songGroups[songGroupIndex]?.start||0;
       const g=songGroups[songGroupIndex];
       if(g)focusSongKeys(g.midis,true);
@@ -1168,7 +1331,7 @@
       clone.querySelector('head').append(data);
       const out='<!DOCTYPE html>\n'+clone.outerHTML;
       const blob=new Blob([out],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.6_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
+      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.9_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
       setTimeout(()=>URL.revokeObjectURL(url),15000);
       $('songLibraryStatus').textContent='✓ Exported private HTML with '+Object.keys(merged).length+' embedded MIDI song(s). Keep it private; the iPhone Files preview may not run interactive HTML.';
     }catch(e){$('songLibraryStatus').textContent='Could not create private song copy: '+(e.message||'export failed');}
@@ -1239,12 +1402,13 @@
   $('octaveUp').addEventListener('click',()=>{state.octave=Math.min(6,state.octave+1);refreshInstrument();});
   $('labelsToggle').addEventListener('change',e=>{state.showLabels=e.target.checked;document.querySelectorAll('.piano,.tine-row,.kalimba-note-grid').forEach(el=>el.classList.toggle('hide-labels',!state.showLabels));persist();});
   $('soundBtn').addEventListener('click',()=>{state.sound=!state.sound;$('soundBtn').textContent=state.sound?'♫ Sound on':'♪ Sound off';$('soundBtn').setAttribute('aria-pressed',String(state.sound));persist();if(state.sound){resumeAudio();preloadPianoOctave();playNote('C4');}syncAudioGate();updateAudioStatus();});
-  $('retrySamples').addEventListener('click',()=>{sampleFailCount=0;resumeAudio();preloadPianoOctave();updateAudioStatus();});
+  $('retrySamples').addEventListener('click',retrySamples);
   document.querySelectorAll('[data-mode]').forEach(el=>el.addEventListener('click',()=>switchMode(el.dataset.mode)));
   $('clefSelect').addEventListener('change',e=>{state.clef=e.target.value==='bass'?'bass':'treble';if(state.mode==='read'){syncReadRange();nextChallenge();}persist();});
   $('hearBtn').addEventListener('click',()=>playNote(state.current));$('nextBtn').addEventListener('click',nextChallenge);$('warmupBtn').addEventListener('click',startDrill);
   document.addEventListener('keydown',e=>{if(e.repeat||e.altKey||e.ctrlKey||e.metaKey||e.target.closest('button, input, textarea, select'))return;const map={'a':'C','w':'C#','s':'D','e':'D#','d':'E','f':'F','t':'F#','g':'G','y':'G#','h':'A','u':'A#','j':'B','k':'C+'};let name=map[e.key.toLowerCase()];if(name&&state.instrument==='piano'){e.preventDefault();handleNote(name==='C+'?'C'+(state.octave+1):name+state.octave);}});
   $('soundBtn').textContent=state.sound?'♫ Sound on':'♪ Sound off';$('soundBtn').setAttribute('aria-pressed',String(state.sound));score();refreshInstrument();
+
 })();
 </script>
 </body>
