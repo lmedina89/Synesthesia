@@ -1,17 +1,12 @@
 {
-  "version": "0.10.0",
-  "sha256": "23e66ce56f857e9bfb051c36da8b6113f889bc0efe61ec38d946e51ab0f28bd2",
-  "source_units": [
-    "core/theory.js",
-    "core/notation.js",
-    "core/session.js",
-    "core/transport.js",
-    "core/catalog.js",
-    "core/midi.js",
-    "storage/song-store.js",
-    "visual/staff-renderer.js",
-    "audio/engine.js",
-    "app.js"
-  ],
-  "notes": "Audio-clock lookahead scheduler; private songs stay user-imported"
+  "version": "0.11.0",
+  "kind": "real-ESM-file-modules",
+  "module_count": 15,
+  "sha256": {
+    "index.html": "9049d6c08b83d75c1af52857f39968fbfaf80505744508cb4518ee8754c5fd61",
+    "standalone.html": "02e4555cb359d984391e2c72c74d30b758ec46eedb28a51686f87effd63f6624",
+    "assets/app.js": "f3fbd6f2552b88efe5c130e01186326194849fe37c7097da11aac47589292508",
+    "assets/styles.css": "4c5439659bce84e88a5bb10ec01edd90f37ab9a535e49fb0f551979e233eef37"
+  },
+  "third_party_midi_bundled": false
 }
