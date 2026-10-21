@@ -25,6 +25,7 @@ export function createFocusMode({$,songUi,callbacks}) {
     callbacks.renderStaff(callbacks.position());
   }
   $('songFocus').addEventListener('click',()=>focusActive?exitFocus():enterFocus());
+  $('scoreFitScreen').addEventListener('click',enterFocus);
   $('focusExit').addEventListener('click',exitFocus);
   $('focusPlay').addEventListener('click',()=>callbacks.playSong());
   for(const [id,step] of [['focusZoomOut',-.25],['focusZoomIn',.25]]){

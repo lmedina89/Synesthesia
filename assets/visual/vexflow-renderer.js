@@ -138,9 +138,24 @@ export const VexflowRenderer = (() => {
           stage.style.width=width+'px';state.windowStart=start;
         }catch(err){stage.replaceChildren();state.windowStart=-1;throw err;}
       }
-      const playingX=xAt(state.anchors,at,state.width),playhead=frame.clientWidth*.34;
-      frame.firstElementChild.style.transform=`translate3d(${Math.round(playhead-playingX)}px,0,0)`;
-      frame.lastElementChild.style.left=playhead+'px';frame.hidden=false;canvas.hidden=true;
+      // VexFlow composes on a 360px-high musical page, but the available
+      // viewport may be much shorter in iPhone landscape or focus mode.
+      // Fit BOTH staves uniformly; scaling X and Y equally preserves glyphs,
+      // staff spacing and pitches. The scrolling playhead stays in viewport
+      // coordinates while note anchors remain in unscaled score coordinates.
+      frame.hidden=false;
+      const availableHeight=frame.clientHeight||H;
+      const availableWidth=frame.clientWidth||MEASURE_W;
+      const scale=Math.min(1,Math.max(.1,availableHeight/H));
+      const playingX=xAt(state.anchors,at,state.width);
+      const playhead=availableWidth*.34;
+      const top=Math.max(0,(availableHeight-H*scale)/2);
+      const stage=frame.firstElementChild;
+      stage.style.transformOrigin='top left';
+      stage.style.transform=`translate3d(${Math.round(playhead-playingX*scale)}px,${Math.round(top)}px,0) scale(${scale})`;
+      stage.dataset.fitScale=scale.toFixed(4);
+      frame.lastElementChild.style.left=playhead+'px';
+      canvas.hidden=true;
       frame.dataset.source=model.inferred?'midi-inferred':'musicxml';return true;
     }catch(error){
       state.song=null;state.notes=null;state.model=null;state.windowStart=-1;

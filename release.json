@@ -1,12 +1,12 @@
 {
-  "version": "0.13.3",
-  "kind": "notation-stabilization-candidate",
+  "version": "0.13.4",
+  "kind": "responsive-notation-layout-fix",
   "module_count": 24,
   "sha256": {
-    "index.html": "77aec5047f28c13d1d67f04d48965f3b3e667e7bf81cf283f743a63c2884312f",
-    "standalone.html": "4bd81580ce65e0e091e6392a58fc3b8d734205839a11263047de479222c56f2b",
+    "index.html": "99627d1195a6cb5bac19498baa638930d459ed0c66e6d1221be9592854198c83",
+    "standalone.html": "214c5cfc818447770da404702a75a0db36b9de757312f1ad8550eda19665a212",
     "assets/app.js": "ba751fda46467cc2d92c03a146de87b67e98912d27ad51fb530eba5345e805bc",
-    "assets/styles.css": "0d0a313a5ad32ee4b721281eb18f693766038af768d11bcbf059e057fe4178aa"
+    "assets/styles.css": "385414d00a88dfb97a28242334dbfb07032d6956d6fa75e796872a1f49020a91"
   },
   "third_party_midi_bundled": false
 }
