@@ -1,10 +1,11 @@
 {
-  "version": "0.9.0",
-  "sha256": "4dfe6d7e8ae1c928a7488c9ed4566148ade65bcfb143d8ca8b0b45ba3f573b42",
+  "version": "0.10.0",
+  "sha256": "23e66ce56f857e9bfb051c36da8b6113f889bc0efe61ec38d946e51ab0f28bd2",
   "source_units": [
     "core/theory.js",
     "core/notation.js",
     "core/session.js",
+    "core/transport.js",
     "core/catalog.js",
     "core/midi.js",
     "storage/song-store.js",
@@ -12,5 +13,5 @@
     "audio/engine.js",
     "app.js"
   ],
-  "notes": "Personal songs remain user-imported; no third-party MIDI files bundled"
+  "notes": "Audio-clock lookahead scheduler; private songs stay user-imported"
 }

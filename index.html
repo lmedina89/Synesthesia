@@ -338,7 +338,7 @@
     <div class="song-feedback" id="songFeedback" aria-live="polite">Ready. Press Play to see keys light up.</div>
     <p class="song-help">Supports standard MIDI files with note data, including most piano MIDI downloads. MIDI is not an MP3 or YouTube link: audio recordings don't contain reliable individual key information. Songs with many instruments may be easier to learn by selecting a single track. The kalimba above still works; notes in its range can light up during playback too.</p>
   </section>
-  <p class="footer">v0.9 · Music geometry and practice engine refactor · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
+  <p class="footer">v0.10 · Music timing & Safari playback recovery · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
 </main>
 <div class="audio-recovery" id="audioRecovery" role="status" aria-live="polite" hidden><span id="audioRecoveryMessage">iPhone paused the piano audio. Tap to restore it.</span><button id="audioRestore" type="button">♫ Restore sound</button></div>
   <script>
@@ -430,6 +430,52 @@ const PracticeSession = (() => {
   }
   return Object.freeze({groupedStarts,activePitches,nextGroupIndex});
 })();
+
+
+/* core/transport.js */
+// Audio-clock-backed, deterministic look-ahead MIDI transport.
+// This does not depend on requestAnimationFrame: UI rendering is a consumer,
+// not the clock that drives music. Pure scheduling with an injectable clock.
+function createSongTransport({now, schedule, onScheduled=(note)=>{}, lookahead=.16, intervalMs=25, startDelay=.06}) {
+  if(typeof now!=='function'||typeof schedule!=='function')throw Error('Transport requires a clock and scheduler');
+  let active=false, events=[],cursor=0,baseTime=0,basePosition=0,rate=1,duration=0,timer=null;
+  function stop(){
+    active=false;
+    if(timer!==null){clearInterval(timer);timer=null;}
+  }
+  function position(){
+    if(!active)return basePosition;
+    return Math.min(duration,Math.max(0,basePosition+Math.max(0,now()-baseTime)*rate));
+  }
+  function start(notes,positionSeconds,playRate,totalDuration,autoTimer=true){
+    stop();
+    if(!Number.isFinite(playRate)||playRate<=0)throw Error('Invalid playback rate');
+    events=notes;rate=playRate;duration=Math.max(0,totalDuration);
+    basePosition=Math.max(0,Math.min(duration,positionSeconds));
+    baseTime=now()+startDelay;
+    // Skip previous attacks. Notes overlapping a seek point are not retriggered.
+    cursor=0;
+    while(cursor<events.length&&events[cursor].start<basePosition-.001)cursor++;
+    active=true;
+    pump();
+    if(autoTimer)timer=setInterval(pump,intervalMs);
+  }
+  function pump(){
+    if(!active)return;
+    const current=now(),horizon=current+lookahead;
+    while(cursor<events.length){
+      const note=events[cursor],at=baseTime+(note.start-basePosition)/rate;
+      if(at>horizon)break;
+      cursor++;
+      if(at<current-.04)continue; // Late callbacks never burst old notes.
+      const scheduledAt=Math.max(at,current+.003);
+      schedule(note,scheduledAt,Math.max(.035,(note.end-note.start)/rate),note.velocity);
+      onScheduled(note);
+    }
+  }
+  function pause(){const p=position();stop();basePosition=p;return p;}
+  return Object.freeze({start,stop,pause,position,pump,isPlaying:()=>active,nextIndex:()=>cursor});
+}
 
 
 /* core/catalog.js */
@@ -699,6 +745,8 @@ const StaffRenderer = (() => {
 function createAudioEngine({state,$,noteMidi,midiName}) {
   let audioCtx = null;
   let audioHasStarted=false, audioRecoverySerial=0;
+  /** @type {(contextState:string)=>void} */
+  let interruptionListener=()=>{};
   // Real Yamaha C5 grand-piano recordings, Salamander Grand Piano V3
   // by Alexander Holm, licensed CC BY 3.0 (see README and LICENSE_SAMPLES.md).
   // Reusing a small subset of the sample naming scheme hosted by Tone.js.
@@ -709,7 +757,10 @@ function createAudioEngine({state,$,noteMidi,midiName}) {
   const sampleBuffers=new Map(), sampleRequests=new Map();
   let sampleFailCount=0;
   function audioContext(){
-    if(!audioCtx||audioCtx.state==='closed'){const AudioCtor=window.AudioContext||/** @type {any} */(window).webkitAudioContext;if(!AudioCtor)throw Error('Web Audio not supported');audioCtx=new AudioCtor();audioCtx.addEventListener?.('statechange',()=>{if(audioHasStarted&&!document.hidden)syncAudioGate();});}
+    if(!audioCtx||audioCtx.state==='closed'){const AudioCtor=window.AudioContext||/** @type {any} */(window).webkitAudioContext;if(!AudioCtor)throw Error('Web Audio not supported');audioCtx=new AudioCtor();audioCtx.addEventListener?.('statechange',()=>{
+      if(audioHasStarted&&!document.hidden)syncAudioGate();
+      if(audioHasStarted&&audioCtx.state!=='running')interruptionListener(audioCtx.state);
+    });}
     return audioCtx;
   }
   // Safari can suspend or interrupt WebAudio when leaving the app. Never claim
@@ -843,20 +894,53 @@ function createAudioEngine({state,$,noteMidi,midiName}) {
     }catch(e){ /* Keep visual trainer available if audio is disabled or unsupported. */ }
   }
   const songVoices=new Set();
-  // A scheduled note uses the recorded grand sample when available and respects a song note's length.
-  function soundMidi(n,duration=.35,velocity=90){if(!state.sound)return;
-    try{const ctx=resumeAudio();if(!ctx)return;
-      const name=closestSample(n),buffer=sampleBuffers.get(name),now=ctx.currentTime;
-      if(!buffer){playSynth(midiName(n),false);loadSample(name).catch(()=>{});return;}
-      const src=ctx.createBufferSource(),gain=ctx.createGain();src.buffer=buffer;
-      src.playbackRate.value=Math.pow(2,(n-noteMidi(name))/12);
-      const volume=Math.min(.27,Math.max(.045,velocity/127*.23));
-      gain.gain.setValueAtTime(.0001,now);gain.gain.linearRampToValueAtTime(volume,now+.014);
-      const release=Math.max(.1,Math.min(duration,5));gain.gain.setValueAtTime(volume,now+release);
-      gain.gain.exponentialRampToValueAtTime(.0001,now+release+.22);
-      src.connect(gain);gain.connect(ctx.destination);src.onended=()=>songVoices.delete(src);
-      songVoices.add(src);src.start(now);src.stop(now+release+.25);
-    }catch(e){}
+  // When scheduled by the transport, all start/stop/envelope timestamps share
+  // the AudioContext clock, including the fallback synth. This permits stable
+  // playback even when the visualizer drops frames.
+  function soundMidiAt(n,when,duration=.35,velocity=90){
+    if(!state.sound||!audioCtx||audioCtx.state!=='running')return false;
+    try{
+      const ctx=audioCtx,at=Math.max(ctx.currentTime+.003,when);
+      const hold=Math.max(.04,Math.min(duration,8)),end=at+hold+.24;
+      const gain=ctx.createGain(),volume=Math.min(.27,Math.max(.035,velocity/127*.23));
+      gain.gain.setValueAtTime(.0001,at);
+      gain.gain.linearRampToValueAtTime(volume,at+.012);
+      gain.gain.setValueAtTime(volume,at+hold);
+      gain.gain.exponentialRampToValueAtTime(.0001,end-.012);
+      gain.connect(ctx.destination);
+      const name=closestSample(n),buffer=sampleBuffers.get(name);
+      const sources=[];
+      if(buffer){
+        const src=ctx.createBufferSource();src.buffer=buffer;
+        src.playbackRate.value=Math.pow(2,(n-noteMidi(name))/12);
+        src.connect(gain);sources.push(src);
+      }else{
+        // Synthesis is a fallback, and is *also* scheduled for the correct time.
+        loadSample(name).catch(()=>{});
+        const pitch=440*Math.pow(2,(n-69)/12);
+        /** @type {Array<[number,number,OscillatorType]>} */
+        const partials=[[1,1,'triangle'],[2,.15,'sine'],[3,.045,'sine']];
+        for(const [ratio,level,wave] of partials){
+          const osc=ctx.createOscillator(),partial=ctx.createGain();
+          osc.type=wave;osc.frequency.setValueAtTime(pitch*ratio,at);
+          partial.gain.value=level;osc.connect(partial);partial.connect(gain);sources.push(osc);
+        }
+      }
+      const voice={stop(){for(const src of sources){try{src.stop();}catch(e){}}}};
+      songVoices.add(voice);
+      let remaining=sources.length;
+      for(const src of sources){
+        src.onended=()=>{remaining--;if(remaining===0){songVoices.delete(voice);try{gain.disconnect();}catch(e){}}};
+        src.start(at);src.stop(end);
+      }
+      return true;
+    }catch(e){return false;}
+  }
+  function soundMidi(n,duration=.35,velocity=90){
+    if(!state.sound)return;
+    const ctx=resumeAudio();if(!ctx)return;
+    // This path is a physical touch gesture, not background playback.
+    return soundMidiAt(n,ctx.currentTime+.006,duration,velocity);
   }
   function preloadSongSamples(songNotes){if(!state.sound||!songNotes?.length)return;
     const unique=[...new Set(songNotes.map(n=>closestSample(n.midi)))];
@@ -864,7 +948,9 @@ function createAudioEngine({state,$,noteMidi,midiName}) {
   }
   function stopSongVoices(){for(const voice of songVoices){try{voice.stop();}catch(e){}}songVoices.clear();}
   function retrySamples(){sampleFailCount=0;resumeAudio();preloadPianoOctave();updateAudioStatus();}
-  return Object.freeze({syncAudioGate,resumeAudio,restoreAudio,ensureAudioReady,preloadPianoOctave,updateAudioStatus,preloadSongSamples,playNote,soundMidi,stopSongVoices,retrySamples});
+  function clockSeconds(){return state.sound&&audioCtx?audioCtx.currentTime:performance.now()/1000;}
+  function setInterruptionHandler(callback){interruptionListener=callback;}
+  return Object.freeze({syncAudioGate,resumeAudio,restoreAudio,ensureAudioReady,preloadPianoOctave,updateAudioStatus,preloadSongSamples,playNote,soundMidi,soundMidiAt,stopSongVoices,retrySamples,clockSeconds,setInterruptionHandler});
 }
 
 
@@ -886,7 +972,7 @@ function createAudioEngine({state,$,noteMidi,midiName}) {
   const {savedSong,saveSong,removeSong}=SongStorage;
   let librarySelectionSerial=0;
   const audio=createAudioEngine({state,$,noteMidi,midiName});
-  const {syncAudioGate,resumeAudio,restoreAudio,ensureAudioReady,preloadPianoOctave,updateAudioStatus,preloadSongSamples,playNote,soundMidi,stopSongVoices,retrySamples}=audio;
+  const {syncAudioGate,resumeAudio,restoreAudio,ensureAudioReady,preloadPianoOctave,updateAudioStatus,preloadSongSamples,playNote,soundMidi,soundMidiAt,stopSongVoices,retrySamples,clockSeconds,setInterruptionHandler}=audio;
   let currentPool = [];
   let nextTimer = null;
   function persist(){try{localStorage.setItem('garden-notes-v1', JSON.stringify({instrument:state.instrument,octave:state.octave,showLabels:state.showLabels,sound:state.sound,correct:state.correct,best:state.best,clef:state.clef}));}catch(e){}}
@@ -1053,8 +1139,21 @@ function createAudioEngine({state,$,noteMidi,midiName}) {
     }
   }
   const SONG_FIRST=21,SONG_LAST=108,SONG_W=29;
-  let song=null,songPosition=0,songPlaying=false,songStartedAt=0,songLastTime=0;
-  let songAnimation=0,songNextIndex=0,songGroups=[],songGroupIndex=0,songGroupDone=new Set();
+  let song=null,songPosition=0,songPlaying=false;
+  let songAnimation=0,songGroups=[],songGroupIndex=0,songGroupDone=new Set();
+  const transport=createSongTransport({
+    now:clockSeconds,
+    schedule:(note,at,duration,velocity)=>soundMidiAt(note.midi,at,duration,velocity),
+    onScheduled:note=>focusSongKeys([note.midi])
+  });
+  // Safari can interrupt the AudioContext without a visibility change.
+  // Pause at its actual audio-clock position rather than running silently.
+  setInterruptionHandler(()=>{
+    if(state.sound&&songPlaying&&$('songMode').value==='watch'){
+      songPosition=transport.pause();stopSong();setSongPosition(songPosition);
+      $('songFeedback').textContent='Piano audio interrupted. Restore sound, then tap Play to continue.';
+    }
+  });
   let songActive=new Set(),selectedSongNotes=[],songMaxDuration=0;
   const songKeys=new Map();
   const songUi={scroll:$('songScroll'),canvas:$('songRoll'),keys:$('songKeys')};
@@ -1181,7 +1280,7 @@ function createAudioEngine({state,$,noteMidi,midiName}) {
     });
   }
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&focusActive){exitFocus();e.preventDefault();}});
-  function stopSong(){songPlaying=false;cancelAnimationFrame(songAnimation);songAnimation=0;
+  function stopSong(){transport.stop();songPlaying=false;cancelAnimationFrame(songAnimation);songAnimation=0;
     stopSongVoices();
     updateSongButtons();songActive.clear();renderSongHighlights();}
   function setSongPosition(time){if(!song)return;
@@ -1189,7 +1288,6 @@ function createAudioEngine({state,$,noteMidi,midiName}) {
     const p=songPosition;
     $('songTime').textContent=fmtTime(p)+' / '+fmtTime(song.duration);
     $('songProgress').value=Math.round(1000*p/Math.max(.1,song.duration));
-    songNextIndex=lowerBoundSong(selectedSongNotes,p-.015);
     songActive=activeSongPitches(p);
     drawSongRoll(p);renderSongHighlights();renderSongStaff(p);
   }
@@ -1242,27 +1340,19 @@ function createAudioEngine({state,$,noteMidi,midiName}) {
     }
     ctx.fillStyle='#f7db9e';ctx.fillRect(0,h-3,w,3);
   }
-  function frameSong(now){if(!songPlaying||!song)return;
-    const step=$('songMode').value==='step';
-    if(step){drawSongRoll(songGroups[songGroupIndex]?.start??songPosition);renderSongHighlights();renderSongStaff(songPosition);return;}
-    songPosition=Math.max(0,(now-songStartedAt)/1000*Number($('songSpeed').value)/100);
-    let played=0;const pitched=[];
-    while(songNextIndex<selectedSongNotes.length&&selectedSongNotes[songNextIndex].start<=songPosition){
-      const n=selectedSongNotes[songNextIndex++];
-      // Catch-up safety: don't trigger a burst of outdated notes after iOS backgrounds a tab.
-      if(n.start>=songPosition-.22 && played++<28)soundMidi(n.midi,(n.end-n.start)*100/Number($('songSpeed').value),n.velocity);
-      pitched.push(n.midi);
-    }
-    if(pitched.length)focusSongKeys(pitched);
+  function frameSong(){if(!songPlaying||!song)return;
+    if($('songMode').value==='step')return;
+    // Rendering reads transport position; it never triggers MIDI attacks.
+    songPosition=transport.position();
     songActive=activeSongPitches(songPosition);
     $('songTime').textContent=fmtTime(songPosition)+' / '+fmtTime(song.duration);
-    $('songProgress').value=Math.min(1000,Math.round(songPosition/song.duration*1000));
+    $('songProgress').value=Math.min(1000,Math.round(songPosition/Math.max(.01,song.duration)*1000));
     drawSongRoll(songPosition);renderSongHighlights();renderSongStaff(songPosition);
     if(songPosition>=song.duration){stopSong();setSongPosition(song.duration);$('songFeedback').textContent='Song finished! Replay it or try the note-by-note practice mode.';return;}
     songAnimation=requestAnimationFrame(frameSong);
   }
   async function playSong(){if(!song)return;
-    if(songPlaying){if($('songMode').value!=='step')songPosition=Math.min(song.duration,(performance.now()-songStartedAt)/1000*Number($('songSpeed').value)/100);stopSong();setSongPosition(songPosition);$('songFeedback').textContent='Paused. Press Play to continue.';return;}
+    if(songPlaying){if($('songMode').value!=='step')songPosition=transport.pause();stopSong();setSongPosition(songPosition);$('songFeedback').textContent='Paused. Press Play to continue.';return;}
     // Auto-enter immersive practice on start; users can exit without losing position.
     enterFocus();
     if(state.sound&&!await ensureAudioReady()){
@@ -1281,8 +1371,7 @@ function createAudioEngine({state,$,noteMidi,midiName}) {
       $('songFeedback').textContent='Play the GREEN key'+(g?.midis.length>1?'s together (or one at a time)':'')+'. The song will wait for you.';
       drawSongRoll(songPosition);renderSongHighlights();renderSongStaff(songPosition);
     }else{
-      songStartedAt=performance.now()-songPosition*1000/(Number($('songSpeed').value)/100);
-      songNextIndex=lowerBoundSong(selectedSongNotes,songPosition-.015);
+      transport.start(selectedSongNotes,songPosition,Number($('songSpeed').value)/100,song.duration);
       $('songFeedback').textContent='Playing at '+$('songSpeed').value+'%. Gold keys are sounding now.';
       songAnimation=requestAnimationFrame(frameSong);
     }
@@ -1331,7 +1420,7 @@ function createAudioEngine({state,$,noteMidi,midiName}) {
       clone.querySelector('head').append(data);
       const out='<!DOCTYPE html>\n'+clone.outerHTML;
       const blob=new Blob([out],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.9_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
+      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.10_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
       setTimeout(()=>URL.revokeObjectURL(url),15000);
       $('songLibraryStatus').textContent='✓ Exported private HTML with '+Object.keys(merged).length+' embedded MIDI song(s). Keep it private; the iPhone Files preview may not run interactive HTML.';
     }catch(e){$('songLibraryStatus').textContent='Could not create private song copy: '+(e.message||'export failed');}
@@ -1378,7 +1467,7 @@ function createAudioEngine({state,$,noteMidi,midiName}) {
   $('songDemo').addEventListener('change',e=>{if(e.target.value){++librarySelectionSerial;$('songLibrary').value='';showLibraryControls('');setSong(demoSong(e.target.value));}});
   $('songPlay').addEventListener('click',playSong);
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&songPlaying&&$('songMode').value==='watch'){
-    songPosition=Math.min(song.duration,(performance.now()-songStartedAt)/1000*Number($('songSpeed').value)/100);
+    songPosition=transport.pause();
     stopSong();setSongPosition(songPosition);$('songFeedback').textContent='Paused while the app was in the background. Tap Play to continue.';
   }});
   $('songReset').addEventListener('click',()=>{seekSong(0);$('songFeedback').textContent='Back to the start. Ready to practice.';});
@@ -1389,7 +1478,10 @@ function createAudioEngine({state,$,noteMidi,midiName}) {
   $('songProgress').addEventListener('input',e=>{seekSong(song.duration*Number(e.target.value)/1000);});
   $('songSpeed').addEventListener('input',()=>{
     const speed=Number($('songSpeed').value)/100;
-    if(songPlaying&&$('songMode').value==='watch'){songPosition=Math.min(song.duration,(performance.now()-songStartedAt)/1000*Number($('songSpeedText').textContent.replace('%',''))/100);songStartedAt=performance.now()-songPosition*1000/speed;}
+    if(songPlaying&&$('songMode').value==='watch'){
+      songPosition=transport.pause();stopSongVoices();
+      transport.start(selectedSongNotes,songPosition,speed,song.duration);
+    }
     $('songSpeedText').textContent=$('songSpeed').value+'%';
   });
   $('songMode').addEventListener('change',()=>{seekSong(0);updateSongButtons();$('songFeedback').textContent=$('songMode').value==='step'?'Practice waits for you to play every highlighted note.':'Watch the keys light up in sync with the song.';});
@@ -1401,7 +1493,22 @@ function createAudioEngine({state,$,noteMidi,midiName}) {
   $('octaveDown').addEventListener('click',()=>{state.octave=Math.max(2,state.octave-1);refreshInstrument();});
   $('octaveUp').addEventListener('click',()=>{state.octave=Math.min(6,state.octave+1);refreshInstrument();});
   $('labelsToggle').addEventListener('change',e=>{state.showLabels=e.target.checked;document.querySelectorAll('.piano,.tine-row,.kalimba-note-grid').forEach(el=>el.classList.toggle('hide-labels',!state.showLabels));persist();});
-  $('soundBtn').addEventListener('click',()=>{state.sound=!state.sound;$('soundBtn').textContent=state.sound?'♫ Sound on':'♪ Sound off';$('soundBtn').setAttribute('aria-pressed',String(state.sound));persist();if(state.sound){resumeAudio();preloadPianoOctave();playNote('C4');}syncAudioGate();updateAudioStatus();});
+  $('soundBtn').addEventListener('click',async()=>{
+    // Switching clock sources (Web Audio <-> performance clock) must never
+    // jump the song to the end or replay notes from an old clock epoch.
+    const watching=songPlaying&&$('songMode').value==='watch';
+    if(watching){songPosition=transport.pause();stopSongVoices();}
+    state.sound=!state.sound;
+    $('soundBtn').textContent=state.sound?'♫ Sound on':'♪ Sound off';
+    $('soundBtn').setAttribute('aria-pressed',String(state.sound));persist();
+    if(state.sound){
+      const ready=await ensureAudioReady();
+      if(!ready&&watching){stopSong();setSongPosition(songPosition);$('songFeedback').textContent='Audio needs restoring. Tap Restore sound, then press Play.';}
+      preloadPianoOctave();
+    }
+    if(watching&&songPlaying)transport.start(selectedSongNotes,songPosition,Number($('songSpeed').value)/100,song.duration);
+    syncAudioGate();updateAudioStatus();
+  });
   $('retrySamples').addEventListener('click',retrySamples);
   document.querySelectorAll('[data-mode]').forEach(el=>el.addEventListener('click',()=>switchMode(el.dataset.mode)));
   $('clefSelect').addEventListener('change',e=>{state.clef=e.target.value==='bass'?'bass':'treble';if(state.mode==='read'){syncReadRange();nextChallenge();}persist();});
