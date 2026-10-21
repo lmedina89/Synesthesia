@@ -1,12 +1,12 @@
 {
-  "version": "0.13.4",
-  "kind": "responsive-notation-layout-fix",
-  "module_count": 24,
+  "version": "0.14",
+  "kind": "guided-lesson-engine",
+  "module_count": 25,
   "sha256": {
-    "index.html": "99627d1195a6cb5bac19498baa638930d459ed0c66e6d1221be9592854198c83",
-    "standalone.html": "214c5cfc818447770da404702a75a0db36b9de757312f1ad8550eda19665a212",
+    "index.html": "652cc7289d95fc0bc44e52a167b11dd00d52216378556ab974837415b2ae7696",
+    "standalone.html": "1b6cabc0c7d914693d9298146b896a7fac1d1522fb2df847866c0deab7e3b116",
     "assets/app.js": "ba751fda46467cc2d92c03a146de87b67e98912d27ad51fb530eba5345e805bc",
-    "assets/styles.css": "385414d00a88dfb97a28242334dbfb07032d6956d6fa75e796872a1f49020a91"
+    "assets/styles.css": "f6f7a5bc86823558cb9c4fda2adb088be59a8250900d28b5af77ff7a5a8772c6"
   },
   "third_party_midi_bundled": false
 }

@@ -270,6 +270,27 @@
 #songStudio.practice-focus .score-fit-button{display:none;}
 @media(max-width:650px){.score-topline{gap:5px}.score-topline .score-help{display:none}}
 
+/* v0.14 guided practice: controls remain out of immersive view, keeping the keys large. */
+.guided-lesson{background:#241e3b;border:1px solid #5c4c78;border-radius:15px;padding:15px;margin:0 0 14px;color:#f6f0ff;}
+.lesson-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:11px;font-size:15px;}
+.lesson-chip{background:#4c426b;color:#efdbff;border-radius:8px;padding:5px 8px;font-size:11px;}
+.lesson-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+.lesson-controls label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700;color:#dfd5f2;min-width:0;}
+.lesson-controls input[type=number],.lesson-controls select{min-width:0;width:100%;min-height:42px;border:1px solid #665580;background:#151429;color:white;border-radius:9px;padding:7px 8px;font-size:15px;}
+.lesson-controls input[type=range]{width:100%;margin-top:10px;accent-color:#bea5ff;}
+.lesson-controls output{color:#f1d2a2;}
+.lesson-toggles,.lesson-action-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;}
+.lesson-toggles label{font-size:13px;color:#e9ddf9;display:flex;align-items:center;gap:6px;}
+.lesson-toggles input{accent-color:#a993fb;width:17px;height:17px;}
+.lesson-status{color:#cfc0e8;font-size:12px;line-height:1.5;margin:12px 0 0;}
+.lesson-note-helper{margin-top:13px;padding:11px 12px;background:#17152b;border:1px solid #484065;border-radius:12px;}
+.lesson-note-helper strong{font-size:13px;}
+.lesson-note-helper p{font-size:12px;color:#c5b8dc;margin:5px 0 9px;line-height:1.45;}
+.lesson-note-chips{display:flex;gap:7px;flex-wrap:wrap;}
+.lesson-note-chips button{background:#342b51;color:#f5eaff;border:1px solid #7961a0;border-radius:9px;padding:8px 12px;min-height:39px;font-size:13px;font-weight:750;}
+.lesson-inspect{color:#b9e8d1;min-height:19px;font-size:12px;margin-top:9px;line-height:1.45;}
+@media(max-width:650px){.lesson-controls{grid-template-columns:repeat(2,minmax(0,1fr));}.guided-lesson{padding:12px;}}
+
 </style>
 </head>
 <body>
@@ -341,6 +362,19 @@
       <label>Practice part<select id="songTrack"><option value="all">All notes</option></select></label>
       <label class="song-speed">Speed <strong id="songSpeedText">75%</strong><input type="range" id="songSpeed" min="25" max="125" step="5" value="75" aria-label="Song playback speed" /></label>
     </div>
+    <section class="guided-lesson" aria-label="Guided lesson settings">
+      <div class="lesson-heading"><strong>🎓 Guided Lesson — learn one passage</strong><span class="lesson-chip">v0.14</span></div>
+      <div class="lesson-controls">
+        <label>Practice hand<select id="lessonHand"><option value="right" selected>Right hand</option><option value="left">Left hand</option><option value="both">Both hands</option></select></label>
+        <label>From measure<input id="lessonFirst" type="number" min="1" max="999" step="1" value="1"></label>
+        <label>Through measure<input id="lessonLast" type="number" min="1" max="999" step="1" value="4"></label>
+        <label>Lesson speed <output id="lessonSpeedOut">50%</output><input id="lessonSpeed" type="range" min="25" max="100" step="5" value="50"></label>
+      </div>
+      <div class="lesson-toggles"><label><input id="lessonLoop" type="checkbox" checked> Loop selected measures</label><label><input id="lessonStrict" type="checkbox"> Strict chord checking</label></div>
+      <div class="lesson-action-row"><button type="button" id="lessonBegin" class="primary">▶ Start guided lesson</button><button type="button" id="lessonStop" class="secondary" disabled>Leave lesson</button><button type="button" id="songDiagnostic" class="secondary">Copy MIDI diagnostic</button></div>
+      <p id="lessonStatus" class="lesson-status" aria-live="polite">Defaults: right hand · measures 1–4 · 50% speed · looping on. MIDI measures can be inferred.</p>
+      <div class="lesson-note-helper"><strong>🔎 Read the notes</strong><p>Tap a note below to hear it, see its key and learn its duration. Note names are also shown on the highlighted keys.</p><div id="lessonNoteChips" class="lesson-note-chips"></div><div id="lessonInspect" class="lesson-inspect" aria-live="polite">Choose a note to inspect it.</div></div>
+    </section>
     <div class="song-buttons"><button class="primary" id="songPlay" type="button">▶ Play song</button><button class="secondary focus-launch" id="songFocus" type="button">⛶ Full-screen practice</button><button class="secondary" id="songReset" type="button">↺ Start over</button><button class="secondary" id="songCenter" type="button">◎ Find glowing keys</button></div>
     <input class="song-progress" id="songProgress" type="range" min="0" max="1000" step="1" value="0" aria-label="Song position" />
     <div class="focus-toolbar" id="focusToolbar" aria-label="Immersive practice controls">
@@ -362,7 +396,7 @@
     <div class="song-feedback" id="songFeedback" aria-live="polite">Ready. Press Play to see keys light up.</div>
     <p class="song-help">Supports uncompressed partwise MusicXML (.musicxml, .xml) and standard MIDI with note data, including most piano MIDI downloads. MIDI is not an MP3 or YouTube link: audio recordings don't contain reliable individual key information. Songs with many instruments may be easier to learn by selecting a single track. The kalimba above still works; notes in its range can light up during playback too.</p>
   </section>
-  <p class="footer">v0.13.4 · VexFlow engraving integration and inferred-MIDI score labeling · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
+  <p class="footer">v0.14 · Guided section practice, note-reading helper and local MIDI diagnostics · VexFlow engraving integration and inferred-MIDI score labeling · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
 </main>
 <div class="audio-recovery" id="audioRecovery" role="status" aria-live="polite" hidden><span id="audioRecoveryMessage">iPhone paused the piano audio. Tap to restore it.</span><button id="audioRestore" type="button">♫ Restore sound</button></div>
   <script defer src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js" id="vexflow-loader"></script>
@@ -457,6 +491,87 @@ const PracticeSession = (() => {
 })();
 
 
+/* core/guided-lesson.js */
+// Pure guided-learning selectors and evaluation. No DOM, browser timers or audio.
+const GuidedLesson = (() => {
+  const DEFAULTS=Object.freeze({hand:'right',first:1,last:4,speed:50,loop:true,strict:false});
+  const clip=(v,min,max)=>Math.max(min,Math.min(max,Number.isFinite(v)?v:min));
+  function measuresFor(song){
+    if(song?.score?.measures?.length)return {measures:song.score.measures.map((m,i)=>({number:i+1,start:m.start,end:m.end})),estimated:false,description:'MusicXML measures'};
+    if(song?.practiceMeasures?.length)return {measures:song.practiceMeasures,estimated:!!song.measuresInferred,description:song.measureDescription||'MIDI timeline'};
+    // Legacy demos have half-second beats, but no explicit meter. Be honest.
+    const length=Math.max(0,song?.duration||0),measures=[];
+    for(let s=0;s<length-.00001;s+=2)measures.push({number:measures.length+1,start:s,end:Math.min(s+2,length)});
+    return {measures:measures.length?measures:[{number:1,start:0,end:length}],estimated:true,description:'Demo: inferred 4/4, 120 BPM'};
+  }
+  function section(measures,first,last){
+    const maximum=Math.max(1,measures.length),a=clip(Math.floor(Number(first)),1,maximum);
+    const b=clip(Math.floor(Number(last)),a,maximum);
+    return {first:a,last:b,start:measures[a-1]?.start||0,end:measures[b-1]?.end||0};
+  }
+  function handTracks(tracks,hand,override='all'){
+    if(override!=='all')return {ids:new Set([Number(override)]),notice:'Using the manually selected MIDI track for '+hand+'-hand practice.'};
+    if(hand==='both')return {ids:null,notice:''};
+    const items=tracks||[];
+    const isLeft=t=>/(left[ -]?hand|\blh\b|staff\s*2|bass)/i.test(t.name||'');
+    const isRight=t=>/(right[ -]?hand|\brh\b|staff\s*1|melody|treble)/i.test(t.name||'');
+    let matches=items.filter(hand==='left'?isLeft:isRight);
+    if(!matches.length&&items.length===2){
+      const opposite=items.filter(hand==='left'?isRight:isLeft);
+      if(opposite.length===1)matches=items.filter(t=>t!==opposite[0]);
+    }
+    if(!matches.length&&hand==='right'&&items.length===1)matches=items;
+    return matches.length?{ids:new Set(matches.map(t=>t.id)),notice:items.length===1?'Single-track melody used for right-hand practice.':'Using '+matches.map(t=>t.name).join(', ')}:
+      {ids:new Set(),notice:'Cannot identify the '+hand+'-hand track. Select its track in “Practice part,” or choose Both hands.'};
+  }
+  function chosenNotes(notes,tracks,hand,trackChoice='all'){
+    const {ids,notice}=handTracks(tracks,hand,trackChoice);
+    return {notes:!ids?notes.slice():notes.filter(n=>ids.has(n.track)),notice,matched:!ids||ids.size>0};
+  }
+  function notesWithin(notes,window){return notes.filter(n=>n.start>=window.start-.000001&&n.start<window.end-.000001);}
+  function groupNotes(notes,tolerance=.055){
+    const sorted=notes.slice().sort((a,b)=>a.start-b.start||a.midi-b.midi),groups=[];
+    for(const note of sorted){const previous=groups.at(-1);
+      if(previous&&Math.abs(previous.start-note.start)<=tolerance){if(!previous.midis.includes(note.midi))previous.midis.push(note.midi);}
+      else groups.push({start:note.start,midis:[note.midi]});
+    }
+    return groups;
+  }
+  function chordPress(expected,progress,pitch,at,{strict=false,windowMs=650}={}){
+    const wanted=new Set(expected),prior=new Map(progress||[]);
+    if(!wanted.has(pitch))return {progress:strict?new Map():prior,status:'wrong',complete:false};
+    if(strict&&prior.size&&at-Math.min(...prior.values())>windowMs)prior.clear();
+    prior.set(pitch,at);
+    const complete=wanted.size>0&&[...wanted].every(n=>prior.has(n));
+    return {progress:prior,status:complete?'complete':'partial',complete};
+  }
+  const name=n=>['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'][n%12]+(Math.floor(n/12)-1);
+  function diagnostic(song){
+    const map=measuresFor(song),notes=song.notes||[],byTrack=new Map();
+    for(const t of song.tracks||[])byTrack.set(t.id,{name:t.name,count:0,min:109,max:20});
+    for(const n of notes){const x=byTrack.get(n.track);if(x){x.count++;x.min=Math.min(x.min,n.midi);x.max=Math.max(x.max,n.midi);}}
+    const invalid=notes.filter(n=>!Number.isFinite(n.start)||!Number.isFinite(n.end)||n.end<=n.start||n.midi<21||n.midi>108).length;
+    const lines=[
+      'Garden Notes v0.14 — Personal song diagnostic',
+      'Generated locally from an imported song. Contains no original MIDI file bytes.',
+      'Song: '+song.name,'Source: '+song.source,'Duration: '+Number(song.duration||0).toFixed(3)+' s',
+      'Playable notes: '+notes.length,'Invalid normalized events: '+invalid,
+      'Tracks: '+(song.tracks||[]).length,'Measure source: '+map.description,
+      'Estimated meter/measure positions: '+(map.estimated?'YES':'NO'),
+      'Measures: '+map.measures.length,
+      ...[...byTrack.entries()].map(([id,t])=>'  Track '+id+': '+t.name+'; '+t.count+' notes'+(t.count?'; range '+name(t.min)+'–'+name(t.max):'')),
+      'Measures 1–8 (song seconds):',
+      ...map.measures.slice(0,8).map(m=>'  '+m.number+': '+m.start.toFixed(3)+'–'+m.end.toFixed(3)),
+      'First 80 note events (time, duration, track, pitch):',
+      ...notes.slice().sort((a,b)=>a.start-b.start||a.midi-b.midi).slice(0,80).map(n=>
+        '  '+n.start.toFixed(3)+'s  '+(n.end-n.start).toFixed(3)+'s  track='+n.track+' '+name(n.midi)+(Number.isFinite(n.startBeat)?' beat='+n.startBeat.toFixed(3):''))
+    ];
+    return lines.join('\n')+'\n';
+  }
+  return Object.freeze({DEFAULTS,measuresFor,section,handTracks,chosenNotes,notesWithin,groupNotes,chordPress,diagnostic});
+})();
+
+
 /* core/catalog.js */
 // Data-driven repertoire metadata and bundled public-domain practice exercises.
 const SongCatalog = (() => {
@@ -522,6 +637,7 @@ const Midi = (() => {
         let b=u8();if(b<128){if(running<128||running>=240)fail('invalid running status');p--;b=running;}
         else if(b<240)running=b;
         if(b===255){if(p>=end)fail('invalid meta event');const kind=u8(),len=vlq(end);if(p+len>end)fail('invalid meta length');
+          if(kind===88&&len>=2){const numerator=view.getUint8(p),denominator=2**view.getUint8(p+1);if(numerator>=1&&numerator<=32&&denominator>=1&&denominator<=32)all.push({type:'meter',tick,numerator,denominator,track});}
           if(kind===81&&len===3){const t=(view.getUint8(p)<<16)|(view.getUint8(p+1)<<8)|view.getUint8(p+2);if(t>0)all.push({type:'tempo',tick,tempo:t,track});}
           if(kind===3&&len)trackName=new TextDecoder('utf-8',{fatal:false}).decode(new Uint8Array(buffer,p,Math.min(len,120))).replace(/[\x00-\x1f]/g,' ').trim()||trackName;
           p+=len;continue;
@@ -552,7 +668,24 @@ const Midi = (() => {
     const end=finished.reduce((m,n)=>Math.max(m,n.end),0);
     if(!finished.length)fail('no playable piano notes (A0–C8) found');
     if(end>14400)fail('song exceeds four hours');
-    return {name:fileName.replace(/\.(mid|midi)$/i,''),notes:finished,tracks:tracks.filter(t=>t.notes),duration:end,source:'MIDI',ticksPerQuarter:division};
+    // Score/practice measure boundaries use time signatures when available.
+    // Unmarked MIDI defaults to 4/4; this inference is shown to the learner.
+    const meterEvents=all.filter(e=>e.type==='meter').sort((a,b)=>a.tick-b.tick||a.track-b.track);
+    const initial=meterEvents.filter(e=>e.tick===0).at(-1);
+    const meter=initial||{numerator:4,denominator:4};
+    const meterChanges=meterEvents.some(e=>e.tick>0);
+    const beatsPerBar=meter.numerator*4/meter.denominator;
+    const practiceMeasures=[];
+    const endBeat=Math.max(end>0?lastTick/division:0,...finished.map(n=>n.endBeat||0));
+    for(let beat=0;beat<endBeat+.00001&&practiceMeasures.length<2000;beat+=beatsPerBar){
+      const a=secAt(Math.round(beat*division)),b=secAt(Math.round((beat+beatsPerBar)*division));
+      practiceMeasures.push({number:practiceMeasures.length+1,start:a,end:Math.min(end,b)});
+    }
+    if(!practiceMeasures.length)practiceMeasures.push({number:1,start:0,end});
+    const measuresInferred=!initial||meterChanges;
+    const measureDescription=initial&&!meterChanges?`MIDI ${meter.numerator}/${meter.denominator} time signature`:
+      meterChanges?`MIDI time-signature changes; approximate ${meter.numerator}/${meter.denominator} measure grid`:'MIDI no time signature; inferred 4/4';
+    return {name:fileName.replace(/\.(mid|midi)$/i,''),notes:finished,tracks:tracks.filter(t=>t.notes),duration:end,source:'MIDI',ticksPerQuarter:division,practiceMeasures,measuresInferred,measureDescription};
   }
   return Object.freeze({parseMidi,songTempoToSeconds});
 })();
@@ -1383,7 +1516,10 @@ const VexflowRenderer = (() => {
           for(let j=start;j<end;j++)engraved+=renderMeasure(VF,context,model,model.measures[j],(j-start)*MEASURE_W+7,j===start,anchors,ties);
           if(!engraved&&model.notes.length)throw new Error('No valid notes in this score window');
           drawTies(VF,context,ties);
-          state.anchors=mapAnchors(anchors);state.width=width;
+          state.anchors=mapAnchors(anchors);
+          state.inspectAnchors=anchors.map(a=>({time:a.time,x:a.note?.getAbsoluteX?.(),
+            ys:a.note?.getYs?.()||[],keys:a.note?.getKeys?.()||[]})).filter(a=>Number.isFinite(a.x));
+          state.width=width;
           stage.style.width=width+'px';state.windowStart=start;
         }catch(err){stage.replaceChildren();state.windowStart=-1;throw err;}
       }
@@ -1414,8 +1550,31 @@ const VexflowRenderer = (() => {
       return false;
     }
   }
+  // Only returns an answer when the tap is sufficiently close to a visible,
+  // actually engraved notehead. Never guess a pitch from empty stave space.
+  function inspectAt(canvas,clientX,clientY){
+    const frame=canvas?.parentNode?.querySelector('.engraved-score');
+    if(!frame||frame.hidden)return null;
+    const state=windows.get(frame),stage=frame.firstElementChild;
+    if(!state?.inspectAnchors?.length)return null;
+    const box=stage.getBoundingClientRect(),scale=Number(stage.dataset.fitScale)||1;
+    const x=(clientX-box.left)/scale,y=(clientY-box.top)/scale;
+    let nearest=null,distance=Infinity;
+    for(const a of state.inspectAnchors){
+      for(let j=0;j<a.ys.length;j++){
+        const dx=x-a.x,dy=y-a.ys[j],d=dx*dx+dy*dy;
+        if(Math.abs(dx)<=24&&Math.abs(dy)<=17&&d<distance){nearest={key:a.keys[j],time:a.time};distance=d;}
+      }
+    }
+    if(!nearest?.key)return null;
+    const match=/^([a-g])([#b]{0,2})\/(\d)$/.exec(nearest.key.toLowerCase());if(!match)return null;
+    const semis={c:0,d:2,e:4,f:5,g:7,a:9,b:11};
+    const altered=[...match[2]].reduce((v,c)=>v+(c==='#'?1:-1),0);
+    const midi=(Number(match[3])+1)*12+semis[match[1]]+altered;
+    return midi>=21&&midi<=108?{midi,time:nearest.time}:null;
+  }
   function reset(canvas){const frame=canvas?.parentNode?.querySelector('.engraved-score');if(frame){frame.hidden=true;canvas.hidden=false;}}
-  return Object.freeze({render,reset,getLastFailure:()=>lastFailure});
+  return Object.freeze({render,reset,inspectAt,getLastFailure:()=>lastFailure});
 })();
 
 
@@ -2123,6 +2282,21 @@ function createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,getContext
     }
   }
   $('songKeyNames').addEventListener('change',e=>{scoreLabels=e.target.value;try{localStorage.setItem(keyLabelStore,scoreLabels);}catch(err){}updateSongKeyLabels();});
+  // A successful VexFlow render has hit-tested notehead positions. Tap one
+  // to hear it and identify its corresponding MIDI piano key. No guesses
+  // are produced for empty stave areas or Canvas fallback rendering.
+  let down=null;
+  scoreContainer.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};},{passive:true});
+  scoreContainer.addEventListener('pointerup',e=>{
+    if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>10){down=null;return;}
+    down=null;
+    const found=VexflowRenderer.inspectAt(scoreCanvas,e.clientX,e.clientY);
+    if(!found)return;
+    readPlayedNotes([found.midi]);
+    $('lessonInspect').textContent='Score note '+midiName(found.midi)+' · '+found.time.toFixed(2)+' seconds into the song. Find its highlighted piano key.';
+    const key=songKeys.get(found.midi);key?.classList.add('song-done');
+    window.setTimeout(()=>key?.classList.remove('song-done'),400);
+  },{passive:true});
   $('songStaffVisible').addEventListener('change',e=>{scoreContainer.hidden=!e.target.checked;if(e.target.checked)requestAnimationFrame(()=>renderSongStaff(getContext().songPosition));});
   function readPlayedNotes(notes){
     lastTouchedNotes=notes.filter(n=>Number.isFinite(n)&&n>=21&&n<=108).slice(-10);
@@ -2223,12 +2397,17 @@ function persistAppPreferences(state, storage) {
 
 
 
+
 function createSongStudio({$,state,audio}) {
   const {NOTES,noteMidi,midiName,midiSharp,lowerBoundSong}=Theory;
   const {demoSong}=SongCatalog;
   const {preloadSongSamples,soundMidi,soundMidiAt,stopSongVoices,clockSeconds,setInterruptionHandler,ensureAudioReady}=audio;
   const SONG_FIRST=21,SONG_LAST=108,SONG_W=29;
   let song=null,songPosition=0,songPlaying=false;
+  // A lesson is opt-in. Watch & Listen remains the default outside guided mode.
+  let lessonActive=false,lessonMeasures=[],lessonRange=null,lessonMistakes=0,lessonLoops=0;
+  let lessonPresses=new Map(),lessonNotice='',lastHelperIndex=-1;
+  const LESSON=GuidedLesson.DEFAULTS;
   let songAnimation=0,songGroups=[],songGroupIndex=0,songGroupDone=new Set();
   const transport=createSongTransport({
     now:clockSeconds,
@@ -2255,18 +2434,54 @@ function createSongStudio({$,state,audio}) {
   function scopedNotes(){return selectedSongNotes;}
   let songNotes=[];
   function setSong(loaded){
-    stopSong();song=loaded;
+    stopSong();song=loaded;lessonActive=false;lessonRange=null;lessonMistakes=0;lessonLoops=0;
+    $('lessonStop').disabled=true;
     songNotes=loaded.notes.slice().sort((a,b)=>a.start-b.start||a.midi-b.midi);
     const options=$('songTrack');options.replaceChildren(new Option('All notes','all'));
     for(const t of loaded.tracks)options.append(new Option(t.name+(t.channel?' ('+t.channel+')':''),String(t.id)));
     options.value='all';songPosition=0;
-    buildSongGroups();setSongPosition(0);$('songTitle').textContent=song.name;
+    refreshLessonMeasures();buildSongGroups();setSongPosition(0);$('songTitle').textContent=song.name;
     $('songFeedback').textContent=(song.source==='MIDI'?'MIDI imported · ':'Demo ready · ')+songNotes.length+' notes. Choose Watch or Wait for my notes.';
-    preloadSongSamples(songNotes);updateSongButtons();
+    preloadSongSamples(songNotes);updateSongButtons();renderLessonNotes();
   }
-  function buildSongGroups(){const track=$('songTrack').value;selectedSongNotes=selectTrackNotes(songNotes,track);
+  function refreshLessonMeasures(){
+    const result=GuidedLesson.measuresFor(song);lessonMeasures=result.measures;
+    for(const id of ['lessonFirst','lessonLast']){$(id).max=Math.max(1,lessonMeasures.length);}
+    $('lessonStatus').textContent=result.description+(result.estimated?' · Measure boundaries are estimated.':' · Written measure boundaries available.')+' Default lesson: RH, measures 1–4 at 50%.';
+  }
+  function activeRange(){return lessonActive&&lessonRange?lessonRange:null;}
+  function buildSongGroups(){
+    lessonNotice='';
+    if(lessonActive){
+      const hand=$('lessonHand').value;
+      const result=GuidedLesson.chosenNotes(songNotes,song?.tracks||[],hand,$('songTrack').value);
+      lessonNotice=result.notice;
+      const measures=GuidedLesson.section(lessonMeasures,Number($('lessonFirst').value),Number($('lessonLast').value));
+      lessonRange=measures;
+      selectedSongNotes=GuidedLesson.notesWithin(result.notes,measures);
+    }else{selectedSongNotes=selectTrackNotes(songNotes,$('songTrack').value);lessonRange=null;}
+    selectedSongNotes.sort((a,b)=>a.start-b.start||a.midi-b.midi);
     songMaxDuration=maximumNoteDuration(selectedSongNotes);
-    songGroups=PracticeSession.groupedStarts(scopedNotes());songGroupIndex=0;songGroupDone.clear();
+    songGroups=GuidedLesson.groupNotes(selectedSongNotes);songGroupIndex=0;songGroupDone.clear();lessonPresses.clear();lastHelperIndex=-1;
+    renderLessonNotes();
+  }
+  function renderLessonNotes(){
+    const parent=$('lessonNoteChips');if(!parent)return;
+    const next=$('songMode').value==='step'&&songPlaying?songGroups[songGroupIndex]?.start??songPosition:songPosition;
+    const imminent=selectedSongNotes.filter(n=>n.start>=next-.04).slice(0,5);
+    parent.replaceChildren();
+    if(!imminent.length){parent.textContent='No upcoming notes in this selection.';return;}
+    for(const n of imminent){
+      const label=midiName(n.midi),duration=Math.max(0,n.end-n.start);
+      const btn=document.createElement('button');btn.type='button';btn.textContent=label;
+      btn.setAttribute('aria-label','Inspect and hear '+label);
+      btn.addEventListener('click',()=>{
+        readPlayedNotes([n.midi]);soundMidi(n.midi,.5);
+        $('lessonInspect').textContent=label+' · '+duration.toFixed(2)+' seconds at original tempo · track '+(song?.tracks?.find(t=>t.id===n.track)?.name||n.track)+(Number.isFinite(n.endBeat)&&Number.isFinite(n.startBeat)?' · '+(n.endBeat-n.startBeat).toFixed(2)+' quarter-note beats':' · MIDI-inferred duration');
+        focusSongKeys([n.midi],false);
+      });
+      parent.append(btn);
+    }
   }
   const fmtTime=formatSongTime;
   function updateSongButtons(){const stepping=$('songMode').value==='step';
@@ -2294,7 +2509,7 @@ function createSongStudio({$,state,audio}) {
     drawSongRoll(p);renderSongHighlights();renderSongStaff(p);
   }
   function activeSongPitches(at){return PracticeSession.activePitches(selectedSongNotes,at,songMaxDuration,lowerBoundSong);}
-  function seekSong(time){stopSong();setSongPosition(time);
+  function seekSong(time){stopSong();const r=activeRange();setSongPosition(r?Math.max(r.start,Math.min(r.end,time)):time);
     if($('songMode').value==='step'){buildSongGroups();songGroupIndex=PracticeSession.nextGroupIndex(songGroups,songPosition);renderSongHighlights();}
   }
   function renderSongHighlights(){
@@ -2326,7 +2541,14 @@ function createSongStudio({$,state,audio}) {
     $('songTime').textContent=fmtTime(songPosition)+' / '+fmtTime(song.duration);
     $('songProgress').value=Math.min(1000,Math.round(songPosition/Math.max(.01,song.duration)*1000));
     drawSongRoll(songPosition);renderSongHighlights();renderSongStaff(songPosition);
-    if(songPosition>=song.duration){stopSong();setSongPosition(song.duration);$('songFeedback').textContent='Song finished! Replay it or try the note-by-note practice mode.';return;}
+    const range=activeRange();
+    if(range&&songPosition>=range.end-.015){
+      if($('lessonLoop').checked){
+        lessonLoops++;stopSongVoices();transport.start(selectedSongNotes,range.start,Number($('songSpeed').value)/100,range.end);
+        songPosition=range.start;
+        $('songFeedback').textContent='↻ Loop '+(lessonLoops+1)+' · measures '+range.first+'–'+range.last;
+      }else{stopSong();setSongPosition(range.end);$('songFeedback').textContent='Practice section finished.';return;}
+    } else if(!range&&songPosition>=song.duration){stopSong();setSongPosition(song.duration);$('songFeedback').textContent='Song finished! Replay it or try the note-by-note practice mode.';return;}
     songAnimation=requestAnimationFrame(frameSong);
   }
   async function playSong(){if(!song)return;
@@ -2338,18 +2560,21 @@ function createSongStudio({$,state,audio}) {
       return;
     }
     preloadSongSamples(songNotes);
-    if(songPosition>=song.duration)seekSong(0);
+    const active=activeRange();
+    if(lessonActive&&!selectedSongNotes.length){$('songFeedback').textContent=lessonNotice||'No notes available in this measure range.';return;}
+    if(active&&(songPosition<active.start||songPosition>=active.end-.01))seekSong(active.start);
+    else if(songPosition>=song.duration)seekSong(0);
     songPlaying=true;
     if($('songMode').value==='step'){
       songGroupIndex=PracticeSession.nextGroupIndex(songGroups,songPosition);
       if(songGroupIndex>=songGroups.length)songGroupIndex=0;
-      songGroupDone.clear();songPosition=songGroups[songGroupIndex]?.start||0;
+      songGroupDone.clear();lessonPresses.clear();songPosition=songGroups[songGroupIndex]?.start??0;
       const g=songGroups[songGroupIndex];
       if(g)focusSongKeys(g.midis,true);
       $('songFeedback').textContent='Play the GREEN key'+(g?.midis.length>1?'s together (or one at a time)':'')+'. The song will wait for you.';
-      drawSongRoll(songPosition);renderSongHighlights();renderSongStaff(songPosition);
+      drawSongRoll(songPosition);renderSongHighlights();renderSongStaff(songPosition);renderLessonNotes();
     }else{
-      transport.start(selectedSongNotes,songPosition,Number($('songSpeed').value)/100,song.duration);
+      transport.start(selectedSongNotes,songPosition,Number($('songSpeed').value)/100,active?.end??song.duration);
       $('songFeedback').textContent='Playing at '+$('songSpeed').value+'%. Gold keys are sounding now.';
       songAnimation=requestAnimationFrame(frameSong);
     }
@@ -2363,16 +2588,21 @@ function createSongStudio({$,state,audio}) {
   function acceptSongPracticeNote(n){
     if(!songPlaying||$('songMode').value!=='step')return;
     const g=songGroups[songGroupIndex];if(!g)return;
-    if(!g.midis.includes(n)){$('songFeedback').textContent=midiName(n)+' is not in this chord. Look for the green keys.';return;}
-    songGroupDone.add(n);
-    if(songGroupDone.size===g.midis.length){
-      songGroupIndex++;songGroupDone.clear();
-      const next=songGroups[songGroupIndex];
-      if(!next){songPlaying=false;setSongPosition(song.duration);$('songFeedback').textContent='🎉 Amazing! You completed the selected part, one note at a time.';updateSongButtons();return;}
+    const result=GuidedLesson.chordPress(g.midis,lessonPresses,n,performance.now(),{strict:lessonActive&&$('lessonStrict').checked});
+    lessonPresses=result.progress;songGroupDone=new Set(lessonPresses.keys());
+    if(result.status==='wrong'){
+      lessonMistakes++;
+      $('songFeedback').textContent='Not in this '+(g.midis.length>1?'chord':'note')+': '+midiName(n)+'. '+(lessonActive&&$('lessonStrict').checked?'Strict mode reset this attempt.':'Try the green key(s).');
+    }else if(result.complete){
+      songGroupIndex++;songGroupDone.clear();lessonPresses.clear();
+      let next=songGroups[songGroupIndex];
+      if(!next){
+        if(lessonActive&&$('lessonLoop').checked){songGroupIndex=0;next=songGroups[0];lessonLoops++;$('songFeedback').textContent='↻ Passage completed! Loop '+(lessonLoops+1)+' · mistakes so far: '+lessonMistakes;}
+        else{songPlaying=false;setSongPosition(activeRange()?.end??song.duration);$('songFeedback').textContent='🎉 Completed! Mistakes: '+lessonMistakes+'.';updateSongButtons();return;}
+      }else{$('songFeedback').textContent='✓ Correct! Next: '+next.midis.map(midiName).join(' + ')+'.';}
       songPosition=next.start;$('songProgress').value=Math.round(1000*songPosition/song.duration);
       $('songTime').textContent=fmtTime(songPosition)+' / '+fmtTime(song.duration);
-      $('songFeedback').textContent='✓ Correct! Next: '+next.midis.map(midiName).join(' + ')+'.';
-      focusSongKeys(next.midis,true);drawSongRoll(songPosition);renderSongStaff(songPosition);
+      focusSongKeys(next.midis,true);drawSongRoll(songPosition);renderSongStaff(songPosition);renderLessonNotes();
     }else{$('songFeedback').textContent='Good! '+(g.midis.length-songGroupDone.size)+' more note(s) in this chord.';}
     renderSongHighlights();
   }
@@ -2381,6 +2611,41 @@ function createSongStudio({$,state,audio}) {
     clearSong:()=>{stopSong();song=null;songNotes=[];selectedSongNotes=[];songGroups=[];songPosition=0;songActive.clear();},
     drawRoll:at=>drawSongRoll(at),updateButtons:()=>updateSongButtons(),songKeys
   }});
+  function resetLesson(resetPosition=true){
+    lessonActive=false;lessonRange=null;$('lessonStop').disabled=true;stopSong();buildSongGroups();
+    if(resetPosition)setSongPosition(0);
+    $('lessonStatus').textContent='Guided lesson ended. Watch & Listen is available again.';
+  }
+  $('lessonBegin').addEventListener('click',async()=>{
+    if(!song)return;
+    stopSong();lessonActive=true;lessonMistakes=0;lessonLoops=0;
+    $('songMode').value='step';
+    $('songSpeed').value=$('lessonSpeed').value;$('songSpeedText').textContent=$('songSpeed').value+'%';
+    buildSongGroups();
+    if(!selectedSongNotes.length){
+      const reason=lessonNotice;lessonActive=false;buildSongGroups();$('lessonStatus').textContent=reason||'No notes in this lesson. Select a specific practice track.';return;
+    }
+    $('lessonStop').disabled=false;
+    $('lessonStatus').textContent='Guided '+$('lessonHand').value+' hand · measures '+lessonRange.first+'–'+lessonRange.last+' · '+$('lessonSpeed').value+'% · '+(lessonMeasures.length?'measure grid: '+GuidedLesson.measuresFor(song).description:'')+'. '+lessonNotice;
+    setSongPosition(lessonRange.start);updateSongButtons();await playSong();
+  });
+  $('lessonStop').addEventListener('click',()=>resetLesson());
+  $('lessonSpeed').addEventListener('input',()=>{$('lessonSpeedOut').textContent=$('lessonSpeed').value+'%';if(lessonActive){$('songSpeed').value=$('lessonSpeed').value;$('songSpeed').dispatchEvent(new Event('input'));}});
+  for(const id of ['lessonHand','lessonFirst','lessonLast']){
+    $(id).addEventListener('change',()=>{if(!lessonActive)return;stopSong();buildSongGroups();setSongPosition(lessonRange.start);$('lessonStatus').textContent=lessonNotice||'Selection updated. Press Play to resume.';});
+  }
+  $('songDiagnostic').addEventListener('click',async()=>{
+    if(!song)return;
+    const report=GuidedLesson.diagnostic(song);
+    try{if(!navigator.clipboard?.writeText)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(report);
+      $('lessonStatus').textContent='✓ Diagnostic copied! Paste it into our chat as plain text. No MIDI file upload required.';
+    }catch(e){
+      const blob=new Blob([report],{type:'text/plain'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+      a.href=url;a.download='Garden_Notes_Song_Diagnostic.txt';document.body.append(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),10000);
+      $('lessonStatus').textContent='Clipboard unavailable. Downloaded a .txt report; open it and copy/paste the text into our chat.';
+    }
+  });
   setupSongKeys();updateSongKeyLabels();
 
   $('songPlay').addEventListener('click',playSong);
@@ -2398,12 +2663,12 @@ function createSongStudio({$,state,audio}) {
     const speed=Number($('songSpeed').value)/100;
     if(songPlaying&&$('songMode').value==='watch'){
       songPosition=transport.pause();stopSongVoices();
-      transport.start(selectedSongNotes,songPosition,speed,song.duration);
+      transport.start(selectedSongNotes,songPosition,speed,activeRange()?.end??song.duration);
     }
     $('songSpeedText').textContent=$('songSpeed').value+'%';
   });
-  $('songMode').addEventListener('change',()=>{seekSong(0);updateSongButtons();$('songFeedback').textContent=$('songMode').value==='step'?'Practice waits for you to play every highlighted note.':'Watch the keys light up in sync with the song.';});
-  $('songTrack').addEventListener('change',()=>{seekSong(0);buildSongGroups();drawSongRoll(0);$('songFeedback').textContent='Part selected. Play to hear or practice only those notes.';});
+  $('songMode').addEventListener('change',()=>{seekSong(activeRange()?.start??0);updateSongButtons();$('songFeedback').textContent=$('songMode').value==='step'?'Practice waits for you to play every highlighted note.':'Watch the keys light up in sync with the song.';});
+  $('songTrack').addEventListener('change',()=>{seekSong(activeRange()?.start??0);buildSongGroups();drawSongRoll(activeRange()?.start??0);$('songFeedback').textContent='Part selected. Play to hear or practice only those notes.';});
   setSong(demoSong('twinkle'));syncFocusZoom();focusSongKeys([60],true);
 
   // Expose only the limited operations the app and beginner trainer need.
@@ -2412,7 +2677,7 @@ function createSongStudio({$,state,audio}) {
     isWatching:()=>songPlaying&&$('songMode').value==='watch',
     isPlaying:()=>songPlaying,
     pauseForSoundSwitch:()=>{songPosition=transport.pause();stopSongVoices();},
-    resumeAfterSoundSwitch:()=>transport.start(selectedSongNotes,songPosition,Number($('songSpeed').value)/100,song.duration),
+    resumeAfterSoundSwitch:()=>transport.start(selectedSongNotes,songPosition,Number($('songSpeed').value)/100,activeRange()?.end??song.duration),
     soundRestoreFailed:()=>{stopSong();setSongPosition(songPosition);$('songFeedback').textContent='Audio needs restoring. Tap Restore sound, then press Play.';}
   });
 }

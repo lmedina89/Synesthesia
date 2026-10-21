@@ -37,6 +37,7 @@ export const Midi = (() => {
         let b=u8();if(b<128){if(running<128||running>=240)fail('invalid running status');p--;b=running;}
         else if(b<240)running=b;
         if(b===255){if(p>=end)fail('invalid meta event');const kind=u8(),len=vlq(end);if(p+len>end)fail('invalid meta length');
+          if(kind===88&&len>=2){const numerator=view.getUint8(p),denominator=2**view.getUint8(p+1);if(numerator>=1&&numerator<=32&&denominator>=1&&denominator<=32)all.push({type:'meter',tick,numerator,denominator,track});}
           if(kind===81&&len===3){const t=(view.getUint8(p)<<16)|(view.getUint8(p+1)<<8)|view.getUint8(p+2);if(t>0)all.push({type:'tempo',tick,tempo:t,track});}
           if(kind===3&&len)trackName=new TextDecoder('utf-8',{fatal:false}).decode(new Uint8Array(buffer,p,Math.min(len,120))).replace(/[\x00-\x1f]/g,' ').trim()||trackName;
           p+=len;continue;
@@ -67,7 +68,24 @@ export const Midi = (() => {
     const end=finished.reduce((m,n)=>Math.max(m,n.end),0);
     if(!finished.length)fail('no playable piano notes (A0–C8) found');
     if(end>14400)fail('song exceeds four hours');
-    return {name:fileName.replace(/\.(mid|midi)$/i,''),notes:finished,tracks:tracks.filter(t=>t.notes),duration:end,source:'MIDI',ticksPerQuarter:division};
+    // Score/practice measure boundaries use time signatures when available.
+    // Unmarked MIDI defaults to 4/4; this inference is shown to the learner.
+    const meterEvents=all.filter(e=>e.type==='meter').sort((a,b)=>a.tick-b.tick||a.track-b.track);
+    const initial=meterEvents.filter(e=>e.tick===0).at(-1);
+    const meter=initial||{numerator:4,denominator:4};
+    const meterChanges=meterEvents.some(e=>e.tick>0);
+    const beatsPerBar=meter.numerator*4/meter.denominator;
+    const practiceMeasures=[];
+    const endBeat=Math.max(end>0?lastTick/division:0,...finished.map(n=>n.endBeat||0));
+    for(let beat=0;beat<endBeat+.00001&&practiceMeasures.length<2000;beat+=beatsPerBar){
+      const a=secAt(Math.round(beat*division)),b=secAt(Math.round((beat+beatsPerBar)*division));
+      practiceMeasures.push({number:practiceMeasures.length+1,start:a,end:Math.min(end,b)});
+    }
+    if(!practiceMeasures.length)practiceMeasures.push({number:1,start:0,end});
+    const measuresInferred=!initial||meterChanges;
+    const measureDescription=initial&&!meterChanges?`MIDI ${meter.numerator}/${meter.denominator} time signature`:
+      meterChanges?`MIDI time-signature changes; approximate ${meter.numerator}/${meter.denominator} measure grid`:'MIDI no time signature; inferred 4/4';
+    return {name:fileName.replace(/\.(mid|midi)$/i,''),notes:finished,tracks:tracks.filter(t=>t.notes),duration:end,source:'MIDI',ticksPerQuarter:division,practiceMeasures,measuresInferred,measureDescription};
   }
   return Object.freeze({parseMidi,songTempoToSeconds});
 })();

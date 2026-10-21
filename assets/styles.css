@@ -260,3 +260,24 @@
 .score-fit-button{border:1px solid #9a87b4;border-radius:8px;color:#f9f1ff;background:#53426f;min-height:34px;padding:5px 9px;font-weight:750;font-size:11px;white-space:nowrap;}
 #songStudio.practice-focus .score-fit-button{display:none;}
 @media(max-width:650px){.score-topline{gap:5px}.score-topline .score-help{display:none}}
+
+/* v0.14 guided practice: controls remain out of immersive view, keeping the keys large. */
+.guided-lesson{background:#241e3b;border:1px solid #5c4c78;border-radius:15px;padding:15px;margin:0 0 14px;color:#f6f0ff;}
+.lesson-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:11px;font-size:15px;}
+.lesson-chip{background:#4c426b;color:#efdbff;border-radius:8px;padding:5px 8px;font-size:11px;}
+.lesson-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;}
+.lesson-controls label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700;color:#dfd5f2;min-width:0;}
+.lesson-controls input[type=number],.lesson-controls select{min-width:0;width:100%;min-height:42px;border:1px solid #665580;background:#151429;color:white;border-radius:9px;padding:7px 8px;font-size:15px;}
+.lesson-controls input[type=range]{width:100%;margin-top:10px;accent-color:#bea5ff;}
+.lesson-controls output{color:#f1d2a2;}
+.lesson-toggles,.lesson-action-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;}
+.lesson-toggles label{font-size:13px;color:#e9ddf9;display:flex;align-items:center;gap:6px;}
+.lesson-toggles input{accent-color:#a993fb;width:17px;height:17px;}
+.lesson-status{color:#cfc0e8;font-size:12px;line-height:1.5;margin:12px 0 0;}
+.lesson-note-helper{margin-top:13px;padding:11px 12px;background:#17152b;border:1px solid #484065;border-radius:12px;}
+.lesson-note-helper strong{font-size:13px;}
+.lesson-note-helper p{font-size:12px;color:#c5b8dc;margin:5px 0 9px;line-height:1.45;}
+.lesson-note-chips{display:flex;gap:7px;flex-wrap:wrap;}
+.lesson-note-chips button{background:#342b51;color:#f5eaff;border:1px solid #7961a0;border-radius:9px;padding:8px 12px;min-height:39px;font-size:13px;font-weight:750;}
+.lesson-inspect{color:#b9e8d1;min-height:19px;font-size:12px;margin-top:9px;line-height:1.45;}
+@media(max-width:650px){.lesson-controls{grid-template-columns:repeat(2,minmax(0,1fr));}.guided-lesson{padding:12px;}}

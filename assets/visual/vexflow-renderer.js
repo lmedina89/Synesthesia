@@ -134,7 +134,10 @@ export const VexflowRenderer = (() => {
           for(let j=start;j<end;j++)engraved+=renderMeasure(VF,context,model,model.measures[j],(j-start)*MEASURE_W+7,j===start,anchors,ties);
           if(!engraved&&model.notes.length)throw new Error('No valid notes in this score window');
           drawTies(VF,context,ties);
-          state.anchors=mapAnchors(anchors);state.width=width;
+          state.anchors=mapAnchors(anchors);
+          state.inspectAnchors=anchors.map(a=>({time:a.time,x:a.note?.getAbsoluteX?.(),
+            ys:a.note?.getYs?.()||[],keys:a.note?.getKeys?.()||[]})).filter(a=>Number.isFinite(a.x));
+          state.width=width;
           stage.style.width=width+'px';state.windowStart=start;
         }catch(err){stage.replaceChildren();state.windowStart=-1;throw err;}
       }
@@ -165,6 +168,29 @@ export const VexflowRenderer = (() => {
       return false;
     }
   }
+  // Only returns an answer when the tap is sufficiently close to a visible,
+  // actually engraved notehead. Never guess a pitch from empty stave space.
+  function inspectAt(canvas,clientX,clientY){
+    const frame=canvas?.parentNode?.querySelector('.engraved-score');
+    if(!frame||frame.hidden)return null;
+    const state=windows.get(frame),stage=frame.firstElementChild;
+    if(!state?.inspectAnchors?.length)return null;
+    const box=stage.getBoundingClientRect(),scale=Number(stage.dataset.fitScale)||1;
+    const x=(clientX-box.left)/scale,y=(clientY-box.top)/scale;
+    let nearest=null,distance=Infinity;
+    for(const a of state.inspectAnchors){
+      for(let j=0;j<a.ys.length;j++){
+        const dx=x-a.x,dy=y-a.ys[j],d=dx*dx+dy*dy;
+        if(Math.abs(dx)<=24&&Math.abs(dy)<=17&&d<distance){nearest={key:a.keys[j],time:a.time};distance=d;}
+      }
+    }
+    if(!nearest?.key)return null;
+    const match=/^([a-g])([#b]{0,2})\/(\d)$/.exec(nearest.key.toLowerCase());if(!match)return null;
+    const semis={c:0,d:2,e:4,f:5,g:7,a:9,b:11};
+    const altered=[...match[2]].reduce((v,c)=>v+(c==='#'?1:-1),0);
+    const midi=(Number(match[3])+1)*12+semis[match[1]]+altered;
+    return midi>=21&&midi<=108?{midi,time:nearest.time}:null;
+  }
   function reset(canvas){const frame=canvas?.parentNode?.querySelector('.engraved-score');if(frame){frame.hidden=true;canvas.hidden=false;}}
-  return Object.freeze({render,reset,getLastFailure:()=>lastFailure});
+  return Object.freeze({render,reset,inspectAt,getLastFailure:()=>lastFailure});
 })();

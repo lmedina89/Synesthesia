@@ -12,3 +12,9 @@ Risk and validation status: 38 unit tests and browser regressions pass, includin
 `core/engraving-model.js` prepares quarter-beat timeline events on a sixteenth-note grid. For MusicXML, non-representable rhythms are rejected, not rounded. For MIDI, inferred notation is quantized (up to 1/8 beat); source note playback times remain untouched. Note durations are decomposed into VexFlow base values with dots and tie links. More than four independent simultaneous voices triggers fallback instead of omission. Explicit MusicXML accidentals are passed through; renderer maintains per-measure pitch accidental state.
 
 The `visual/vexflow-renderer.js` is a progressive enhancement; failures are surfaced through `getLastFailure()` and `ui/song-notation.js`. Real third-party library validation is still blocked in this sandbox; this release is not a claim of fully validated engraving.
+
+## v0.14 isolated guided lesson selector
+
+`src/core/guided-lesson.js` provides pure deterministic measure resolution, hand-track selection, section filtering, grouped chord validation, and local diagnostic report generation. The existing `src/ui/song-studio.js` composes lesson state with song playback and steps. The existing MIDI parser now preserves a bounded practice-measure table from time-signature and tempo metadata; MIDI with missing/changing meter is explicitly marked approximate. Note help uses the same normalized song events as the keyboard/audio; no fake user scores.
+
+Avoid adding UI/DOM dependencies to `core/guided-lesson.js`. Retain original v0.13.4 as a protected rollback. `v0.14` is deliberately not a new sheet-engraving implementation.

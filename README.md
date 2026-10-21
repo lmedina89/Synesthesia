@@ -1,51 +1,60 @@
-# Garden Notes v0.13.4 — Rhythm & Engraving Stabilization (candidate)
+# Garden Notes v0.14 — Guided Practice Engine (release candidate)
 
-An incremental release from v0.13.1: the scrolling staff now **attempts to use VexFlow 4.2.2** for conventional musical glyphs, barlines, clefs, ledger lines, and accidentals. The existing Canvas pitch guide activates automatically if VexFlow is unavailable or cannot lay out the notes. The piano keyboard, audio engine, imported MIDI library, guided practice, kalimba, and private song exports are preserved.
+Built incrementally from the **v0.13.4** modular developer source. All existing releases are kept unchanged as recovery baselines.
 
-## Install
+## New: Guided Lesson
 
-1. Save a copy of your v0.13.1 deployment and your personal MIDI songs first.
-2. Extract the `Garden_Notes_v0.13.4_GitHub_Ready.zip` and upload **all** files, including the `assets` folder, to GitHub Pages with `index.html` at the root.
-3. Refresh Safari and load a song. The score caption says either `Engraved MusicXML score · VexFlow`, `MIDI transcription · inferred...`, or `Pitch guide fallback`.
-4. For your preferred Balamb Garden MIDI, check the 0:30–0:46 passage and whether notes on both staves match the piano roll. If the caption says fallback, the score is **not** showing VexFlow.
+The opt-in lesson panel defaults to:
 
-## Third-party dependency
+- **Right hand**
+- **Measures 1 through 4**
+- **50% speed**
+- **Automatic looping enabled**
 
-VexFlow v4.2.2 (MIT license; https://github.com/0xfe/vexflow) is loaded at runtime from a version-pinned jsDelivr script URL. This environment could not download the library into the GitHub ZIP, so **the engraved display requires the browser to access that CDN**. The piano and falling-note trainer do not depend on this library. A private standalone export also refers to the same CDN and retains the fallback.
+Press **Start guided lesson** to activate these choices, then tap the green notes on the piano. When the last note in the selected measure range is completed, the app returns to the first note if looping is enabled. Optional **Strict chord checking** requires a chord's notes to be pressed within 650 ms and resets the attempt for an extra/wrong note. The default allows one-at-a-time chord practice. The 50% tempo setting applies when switching to **Watch & Listen**; the step-by-step mode waits for your input at your own pace.
 
-## Musical accuracy
+For normal full-song playback, leave the lesson or use Watch & Listen outside the guided session.
 
-- **MusicXML**: uses the imported score's pitches, clefs, measures, meter and voices when the features fit our supported subset; straightforward durations and rests are rendered by VexFlow.
-- **MIDI-only**: retains true pitch and original MIDI tick timings, but assigns treble/bass heuristically and guesses meter and notated rhythmic grouping. The display explicitly calls itself an inferred transcription. It is **not** publisher-authoritative sheet music.
-- Complex multi-voice collisions, cross-staff writing, beam grouping, tuplets, slurs, grace notes, repeats, and difficult quantization still require work. Importantly, the MIDI parser now retains `startBeat`/`endBeat` for notation while unchanged seconds continue to drive audio.
+### Musical honesty
+
+- MusicXML files use the imported score's **actual measure boundaries** when available.
+- MIDI files with an initial time signature use the **MIDI meter** and tick-to-second tempo mapping to determine practice sections.
+- MIDI files without a time signature use an **explicitly labeled inferred 4/4 grid**. Songs with mid-song time-signature changes currently show a warning and approximate boundaries rather than claiming a perfectly accurate score.
+- Hand assignment uses explicitly named right/left tracks (or MusicXML staff 1/2). Ambiguous multi-track MIDIs **will not be guessed**. You can manually select the correct MIDI track, then start the lesson.
+- The lesson checks **pitches/chord inputs**, not expressive touch, fingering or precision timing. It is not a substitute for instruction on hand technique.
+
+## New: learn notes + private MIDI diagnostics
+
+- Tap **upcoming-note buttons** to hear the corresponding piano pitch, see its name, source track, and written beat duration when available.
+- In successfully engraved VexFlow mode, tapping near a rendered notehead may identify the note. This is a new integration and still needs validation with the real VexFlow runtime on iPhone; the independent note buttons work without VexFlow.
+- Tap **Copy MIDI diagnostic** after loading your Balamb Garden MIDI. Garden Notes builds a plain-text, local-only summary of its track names, pitch range, measure grid and first 80 note events. It does **not** send or upload the MIDI. Paste that text into ChatGPT for source-data validation. If clipboard access is blocked, a `.txt` copy downloads instead.
+- This report allows pitch/timing/data checks **but cannot prove a transcription matches Lara6683's recording** without a comparable reference score/performance transcription.
+
+## Existing features preserved
+
+88-key piano and real Yamaha C5 samples with fallback, kalimba, falling notes, MIDI/MusicXML import, personal indexedDB song library and private HTML export, screen-filling responsive practice, Safari audio recovery, and sheet-music renderer/fallback.
 
 ## Development
 
-- `python scripts/build.py` — build external ES modules and portable personal standalone HTML.
-- `bash scripts/validate.sh` — 38 passing Node unit tests plus desktop/mobile browser regression tests, simulated audio interruptions, MIDI and MusicXML imports, private MIDI pack round-trips, and a VexFlow **adapter** test against an API-compatible test double.
-- The **real third-party VexFlow bundle could not be loaded or visually tested in this offline environment**, and the app hasn't yet been checked on physical iPhone Safari. Do not treat the engraver as final until the actual device confirms the result.
+```sh
+python scripts/build.py
+node --test tests/guided-lesson.test.mjs
+python tests/guided_browser.py
+bash scripts/validate.sh
+```
 
-No external Balamb Garden or Garden of the Gods MIDI has been bundled. Existing personally imported MIDI is preserved by the current browser storage scheme.
+Build outputs are in `dist/`. The GitHub-ready ZIP uses native ES modules and separate CSS, not a monolithic runtime HTML. The stand-alone private HTML export is built from the same modules and may embed a user's own imported MIDI songs.
 
+### Verification completed in this environment
 
-## v0.13.4 stabilization changes
+- 51/51 unit tests, including 7 new guided practice tests.
+- Desktop and simulated iPhone Chromium: guided defaults, labeled right-hand MIDI track filtering, note feedback, 1–4 looping, note inspector, diagnostic action, and normal watch/listen regression.
+- Existing desktop/mobile/landscape, MIDI/MusicXML, simulated audio interruption, engraving adapter/fallback, and private MIDI export tests completed. The combined shell suite exceeded the runner's time budget late in the run; its final public-export case passed separately.
 
-- A 1.25-quarter-note MIDI event is now notated as tied quarter + sixteenth, **not** one sixteenth. Durations are decomposed, with explicit dots and ties where supported.
-- Notes crossing measure boundaries are represented in both measures; overlapping voices are allocated separate rhythmic lanes. No silent `slice()`/`continue` note omission. Unsupported five-or-more overlapping voices / triplet subdivisions explicitly reject engraving and show the reliable pitch guide. **Playback notes are unchanged.**
-- MusicXML natural/sharp/flat accidental declarations are forwarded to the engraving adapter, and per-measure accidental state is maintained. Key signatures are preserved.
-- The score UI now shows an error reason whenever VexFlow rendering falls back. Browser tests cover MIDI playback, library storage/export and immersive practice; specific notation regression tests cover ties, durations, overlapping voices and unsupported rhythms.
+### Outstanding gates
 
-### Important release gate — not yet passed
+- Physical iPhone Safari validation of touch chords, playback, audio interruptions and saved-song persistence.
+- Real VexFlow 4.2.2 integration remains CDN-loaded and was not available for testing locally; existing fallback is retained.
+- Verify your **specific personal Balamb Garden MIDI** by sharing the text diagnostic; that file lives in your browser and is not included here.
 
-**The real VexFlow 4.2.2 runtime is loaded from a pinned CDN, not vendored.** This execution environment blocks CDN access (`ERR_BLOCKED_BY_ADMINISTRATOR`), so a test with real VexFlow could not be completed. The browser engraver test still uses a compatible mock. This is a **candidate**, not a signed-off production release; on an iPhone with the CDN available, check the score status and compare the 30–46 second Balamb Garden passage. If rendering fails, the on-screen pitch guide should remain usable and the reason should be visible.
-
-The song MIDIs are not bundled in the public ZIP. Physical iPhone Safari audio and notation tests remain outstanding. Advanced tuplets, multi-staff cross-beaming, and full publisher-grade MIDI transcription are outside this fix.
-
-
-## v0.13.4 — Responsive score hotfix
-
-- In immersive mode, the full 360px VexFlow score is uniformly scaled to fit available height without cropping the bass staff. The playhead is rescaled to match.
-- Landscape now reserves more width for the score. Portrait balances staff height and keyboard touch targets.
-- A **Fit to screen** control next to the regular sheet music opens immersive view directly.
-- Added portrait/landscape/rotation regression assertions against browser layout.
-- Browser simulation does not validate the real external VexFlow library or physical iPhone Safari.
+This is a personal tool; third-party arrangements are **not bundled** with the public GitHub release.

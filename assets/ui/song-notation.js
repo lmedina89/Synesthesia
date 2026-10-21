@@ -19,6 +19,21 @@ export function createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,get
     }
   }
   $('songKeyNames').addEventListener('change',e=>{scoreLabels=e.target.value;try{localStorage.setItem(keyLabelStore,scoreLabels);}catch(err){}updateSongKeyLabels();});
+  // A successful VexFlow render has hit-tested notehead positions. Tap one
+  // to hear it and identify its corresponding MIDI piano key. No guesses
+  // are produced for empty stave areas or Canvas fallback rendering.
+  let down=null;
+  scoreContainer.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY};},{passive:true});
+  scoreContainer.addEventListener('pointerup',e=>{
+    if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>10){down=null;return;}
+    down=null;
+    const found=VexflowRenderer.inspectAt(scoreCanvas,e.clientX,e.clientY);
+    if(!found)return;
+    readPlayedNotes([found.midi]);
+    $('lessonInspect').textContent='Score note '+midiName(found.midi)+' · '+found.time.toFixed(2)+' seconds into the song. Find its highlighted piano key.';
+    const key=songKeys.get(found.midi);key?.classList.add('song-done');
+    window.setTimeout(()=>key?.classList.remove('song-done'),400);
+  },{passive:true});
   $('songStaffVisible').addEventListener('change',e=>{scoreContainer.hidden=!e.target.checked;if(e.target.checked)requestAnimationFrame(()=>renderSongStaff(getContext().songPosition));});
   function readPlayedNotes(notes){
     lastTouchedNotes=notes.filter(n=>Number.isFinite(n)&&n>=21&&n<=108).slice(-10);

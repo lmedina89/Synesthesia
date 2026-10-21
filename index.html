@@ -77,6 +77,19 @@
       <label>Practice part<select id="songTrack"><option value="all">All notes</option></select></label>
       <label class="song-speed">Speed <strong id="songSpeedText">75%</strong><input type="range" id="songSpeed" min="25" max="125" step="5" value="75" aria-label="Song playback speed" /></label>
     </div>
+    <section class="guided-lesson" aria-label="Guided lesson settings">
+      <div class="lesson-heading"><strong>🎓 Guided Lesson — learn one passage</strong><span class="lesson-chip">v0.14</span></div>
+      <div class="lesson-controls">
+        <label>Practice hand<select id="lessonHand"><option value="right" selected>Right hand</option><option value="left">Left hand</option><option value="both">Both hands</option></select></label>
+        <label>From measure<input id="lessonFirst" type="number" min="1" max="999" step="1" value="1"></label>
+        <label>Through measure<input id="lessonLast" type="number" min="1" max="999" step="1" value="4"></label>
+        <label>Lesson speed <output id="lessonSpeedOut">50%</output><input id="lessonSpeed" type="range" min="25" max="100" step="5" value="50"></label>
+      </div>
+      <div class="lesson-toggles"><label><input id="lessonLoop" type="checkbox" checked> Loop selected measures</label><label><input id="lessonStrict" type="checkbox"> Strict chord checking</label></div>
+      <div class="lesson-action-row"><button type="button" id="lessonBegin" class="primary">▶ Start guided lesson</button><button type="button" id="lessonStop" class="secondary" disabled>Leave lesson</button><button type="button" id="songDiagnostic" class="secondary">Copy MIDI diagnostic</button></div>
+      <p id="lessonStatus" class="lesson-status" aria-live="polite">Defaults: right hand · measures 1–4 · 50% speed · looping on. MIDI measures can be inferred.</p>
+      <div class="lesson-note-helper"><strong>🔎 Read the notes</strong><p>Tap a note below to hear it, see its key and learn its duration. Note names are also shown on the highlighted keys.</p><div id="lessonNoteChips" class="lesson-note-chips"></div><div id="lessonInspect" class="lesson-inspect" aria-live="polite">Choose a note to inspect it.</div></div>
+    </section>
     <div class="song-buttons"><button class="primary" id="songPlay" type="button">▶ Play song</button><button class="secondary focus-launch" id="songFocus" type="button">⛶ Full-screen practice</button><button class="secondary" id="songReset" type="button">↺ Start over</button><button class="secondary" id="songCenter" type="button">◎ Find glowing keys</button></div>
     <input class="song-progress" id="songProgress" type="range" min="0" max="1000" step="1" value="0" aria-label="Song position" />
     <div class="focus-toolbar" id="focusToolbar" aria-label="Immersive practice controls">
@@ -98,7 +111,7 @@
     <div class="song-feedback" id="songFeedback" aria-live="polite">Ready. Press Play to see keys light up.</div>
     <p class="song-help">Supports uncompressed partwise MusicXML (.musicxml, .xml) and standard MIDI with note data, including most piano MIDI downloads. MIDI is not an MP3 or YouTube link: audio recordings don't contain reliable individual key information. Songs with many instruments may be easier to learn by selecting a single track. The kalimba above still works; notes in its range can light up during playback too.</p>
   </section>
-  <p class="footer">v0.13.4 · VexFlow engraving integration and inferred-MIDI score labeling · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
+  <p class="footer">v0.14 · Guided section practice, note-reading helper and local MIDI diagnostics · VexFlow engraving integration and inferred-MIDI score labeling · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
 </main>
 <div class="audio-recovery" id="audioRecovery" role="status" aria-live="polite" hidden><span id="audioRecoveryMessage">iPhone paused the piano audio. Tap to restore it.</span><button id="audioRestore" type="button">♫ Restore sound</button></div>
   <script defer src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js" id="vexflow-loader"></script>
