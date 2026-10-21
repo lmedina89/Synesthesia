@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#100f22" />
   <meta name="description" content="Play real grand-piano samples, learn a 17-key kalimba, and follow glowing piano keys for any imported MIDI song." />
-  <title>Garden Notes — Piano & Kalimba Song Studio</title>
+  <title>Garden Notes v0.5 — RPG Song Library</title>
   <style>
     :root { color-scheme: dark; --bg:#100f22; --panel:#1a1932; --panel2:#211f3c; --line:#393454; --ink:#f6f1ff; --muted:#b0a9cd; --lav:#b9a4ff; --gold:#f3c992; --good:#91dfbf; --bad:#ff9bac; --white:#fffaf2; }
     * { box-sizing:border-box; }
@@ -33,6 +33,18 @@
     .hero-action:focus-visible{outline:3px solid var(--gold);outline-offset:3px;}
     .hero-action-note{color:var(--muted);font-size:11px;align-self:center;}
     #songStudio{scroll-margin-top:12px;}
+    .rpg-library{margin:0 0 14px;padding:15px;border:1px solid #584870;background:linear-gradient(120deg,#302442,#26213e);border-radius:15px;display:grid;grid-template-columns:minmax(180px,1fr) minmax(0,1.65fr);gap:14px;align-items:start;}
+    .rpg-library label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:800;color:#efd9b0;}
+    .rpg-library select{width:100%;background:#221d37;color:#f8efff;border:1px solid #716489;border-radius:10px;min-height:43px;padding:10px;font-size:13px;}
+    .rpg-library .library-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+    .rpg-library .library-actions button,.rpg-library .library-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:39px;padding:9px 11px;border-radius:10px;font-size:12px;font-weight:760;line-height:1.2;text-decoration:none;cursor:pointer;}
+    .rpg-library .library-actions button{background:#c6abff;color:#20152c;border:0;}
+    .rpg-library .library-actions .library-remove{background:transparent;border:1px solid #675778;color:#e5d7ff;}
+    .rpg-library .library-actions a{background:#332a49;border:1px solid #786393;color:#efe1ff;}
+    .rpg-library .library-status{color:#c9bbdf;font-size:12px;line-height:1.55;margin:8px 0 0;}
+    .rpg-library .library-hint{font-size:11px;color:#bcb0d3;line-height:1.55;margin:4px 0 0;}
+    @media(max-width:650px){.rpg-library{grid-template-columns:1fr;gap:10px;}}
+
     .scoreboard{display:flex;gap:9px;}
     .score{background:rgba(35,32,62,.85);border:1px solid var(--line);border-radius:16px;padding:12px 15px;min-width:83px;text-align:center;}
     .score-value{font-size:25px;font-weight:850;line-height:1.1;color:var(--gold);}
@@ -217,7 +229,22 @@
   </section>
 
   <section class="panel song-studio" id="songStudio" aria-label="Song studio">
-    <div class="song-heading"><div><p class="eyebrow">New · Guided song mode</p><h2>Follow the glowing keys</h2><p>Import a MIDI song to watch its notes light up on a complete 88-key piano. Slow it down or practice one note/chord at a time, without a time limit.</p></div><span class="song-tag">88-key MIDI trainer</span></div>
+    <div class="song-heading"><div><p class="eyebrow">RPG Song Library · Guided practice</p><h2>Follow the glowing keys</h2><p>Choose Balamb Garden or Garden of the Gods, add your downloaded MIDI once, then replay it from your saved song library. You can still import any other MIDI, slow playback, and practice one note at a time.</p></div><span class="song-tag">88-key MIDI trainer</span></div>
+    <div class="rpg-library">
+      <label for="songLibrary">Your RPG practice songs
+        <select id="songLibrary" aria-label="Choose saved RPG song"><option value="">Choose a game soundtrack…</option><option value="balamb">★ Balamb Garden — Final Fantasy VIII</option><option value="gods">Garden of the Gods — Chrono Cross</option></select>
+      </label>
+      <div>
+        <div class="library-actions" id="songLibraryActions" hidden>
+          <a id="songLibrarySource" href="https://www.vgmusic.com/file/b7167903bf8deb1195e96a8b0c1eba7a.html" target="_blank" rel="noopener noreferrer">↗ Find free MIDI</a>
+          <button id="songLibraryInstall" type="button">＋ Add downloaded MIDI</button>
+          <button id="songLibraryRemove" class="library-remove" type="button" hidden>Remove saved copy</button>
+          <input id="songLibraryFile" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" hidden aria-label="Choose MIDI for the selected song" />
+        </div>
+        <p id="songLibraryStatus" class="library-status" aria-live="polite">Select a song above to set up its dedicated practice slot.</p>
+        <p id="songLibraryHint" class="library-hint">MIDI files are provided by their creators, not repackaged in this app. Once added, your copy stays on this browser/device where storage is available.</p>
+      </div>
+    </div>
     <div class="song-loaders">
       <label>Start with a demo<select id="songDemo"><option value="twinkle">Twinkle Twinkle Little Star</option><option value="scale">C major scale</option><option value="chords">Chords & melody</option></select></label>
       <label class="song-file" for="songFile">↥ Import a MIDI song (.mid / .midi)<input id="songFile" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" aria-label="Import a MIDI file" /></label>
@@ -464,6 +491,98 @@
   }
 
   // ---- Garden Notes Song Studio: local, dependency-free Standard MIDI File parser ----
+  const RPG_SONGS={
+    balamb:{title:'Balamb Garden',game:'Final Fantasy VIII',source:'https://www.vgmusic.com/file/b7167903bf8deb1195e96a8b0c1eba7a.html',help:'Open the VGMusic song page and download its piano MIDI. It contains separate Right Hand and Left Hand tracks.'},
+    gods:{title:'Garden of the Gods',game:'Chrono Cross',source:'https://www.riulynrpg.info/',help:'On Riulyn’s page, find Chrono Cross → Garden of the Gods and download the MIDI from its row.'}
+  };
+  const SONG_DB='garden-notes-library-v1',SONG_STORE='midi-songs';
+  let librarySelectionSerial=0;
+  async function songDB(){
+    if(!('indexedDB' in window))throw Error('Local song storage is not available in this browser.');
+    return await new Promise((resolve,reject)=>{
+      const request=indexedDB.open(SONG_DB,1);
+      request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(SONG_STORE))request.result.createObjectStore(SONG_STORE,{keyPath:'key'});};
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error||Error('Local song storage could not open.'));
+      request.onblocked=()=>reject(Error('Song storage is blocked by another open tab.'));
+    });
+  }
+  async function savedSong(key){
+    const db=await songDB();
+    try{return await new Promise((resolve,reject)=>{
+      const req=db.transaction(SONG_STORE,'readonly').objectStore(SONG_STORE).get(key);
+      req.onsuccess=()=>resolve(req.result||null);
+      req.onerror=()=>reject(req.error||Error('Unable to load saved MIDI.'));
+    });}finally{db.close();}
+  }
+  async function saveSong(key,filename,buffer){
+    const db=await songDB();
+    try{await new Promise((resolve,reject)=>{
+      const tx=db.transaction(SONG_STORE,'readwrite');
+      tx.objectStore(SONG_STORE).put({key,filename,buffer,savedAt:Date.now()});
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||Error('Unable to store MIDI.'));
+      tx.onabort=()=>reject(tx.error||Error('MIDI save transaction cancelled.'));
+    });}finally{db.close();}
+  }
+  async function removeSong(key){
+    const db=await songDB();
+    try{await new Promise((resolve,reject)=>{
+      const tx=db.transaction(SONG_STORE,'readwrite');
+      tx.objectStore(SONG_STORE).delete(key);
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||Error('Unable to remove stored MIDI.'));
+      tx.onabort=()=>reject(tx.error||Error('MIDI removal cancelled.'));
+    });}finally{db.close();}
+  }
+  function showLibraryControls(key,installed=false){
+    const meta=RPG_SONGS[key];
+    $('songLibraryActions').hidden=!meta;
+    if(!meta){$('songLibraryStatus').textContent='Select a song above to set up its dedicated practice slot.';return;}
+    $('songLibrarySource').href=meta.source;
+    $('songLibraryInstall').textContent=installed?'↥ Replace saved MIDI':'＋ Add downloaded MIDI';
+    $('songLibraryRemove').hidden=!installed;
+  }
+  function songPlaceholder(meta){
+    stopSong();song=null;songNotes=[];selectedSongNotes=[];songGroups=[];songPosition=0;songActive.clear();
+    $('songTrack').replaceChildren(new Option('All notes','all'));
+    $('songTitle').textContent=meta.title+' — add a MIDI to begin';
+    $('songTime').textContent='0:00 / 0:00';$('songProgress').value=0;
+    drawSongRoll(0);
+    for(const key of songKeys.values())key.classList.remove('song-lit','song-target','song-done');
+    updateSongButtons();
+  }
+  function setLibrarySong(key,buffer,filename){
+    const meta=RPG_SONGS[key];
+    const loaded=parseMidi(buffer,filename);
+    loaded.name=meta.title+' · '+meta.game;
+    setSong(loaded);
+    $('songDemo').value='';
+    return loaded;
+  }
+  async function selectLibrarySong(){
+    const key=$('songLibrary').value,meta=RPG_SONGS[key];
+    const serial=++librarySelectionSerial;
+    showLibraryControls(key,false);
+    if(!meta)return;
+    songPlaceholder(meta);
+    $('songLibraryStatus').textContent='Looking for your saved '+meta.title+' MIDI…';
+    try{
+      const saved=await savedSong(key);
+      if(serial!==librarySelectionSerial)return;
+      if(saved){
+        const loaded=setLibrarySong(key,saved.buffer,saved.filename);
+        showLibraryControls(key,true);
+        $('songLibraryStatus').textContent='✓ '+meta.title+' is saved on this device · '+loaded.notes.length+' piano notes. Ready to learn!';
+      }else{
+        $('songLibraryStatus').textContent=meta.help+' Then tap “Add downloaded MIDI” below to save it here for future sessions.';
+        $('songFeedback').textContent=meta.title+' is ready for a one-time MIDI import.';
+      }
+    }catch(err){
+      if(serial!==librarySelectionSerial)return;
+      $('songLibraryStatus').textContent='Could not access locally saved songs: '+(err.message||'storage unavailable')+'. You can still import a MIDI for this session.';
+    }
+  }
   const SONG_FIRST=21,SONG_LAST=108,SONG_W=29;
   let song=null,songPosition=0,songPlaying=false,songStartedAt=0,songLastTime=0;
   let songAnimation=0,songNextIndex=0,songGroups=[],songGroupIndex=0,songGroupDone=new Set();
@@ -614,6 +733,7 @@
   function updateSongButtons(){const stepping=$('songMode').value==='step';
     $('songPlay').textContent=stepping?'▶ Start note practice':songPlaying?'Ⅱ Pause song':'▶ Play song';
     if(stepping&&songPlaying)$('songPlay').textContent='Ⅱ Pause practice';
+    $('songPlay').disabled=!song;
   }
   const songVoices=new Set();
   function stopSong(){songPlaying=false;cancelAnimationFrame(songAnimation);songAnimation=0;
@@ -758,15 +878,43 @@
     renderSongHighlights();
   }
   setupSongKeys();
+  $('songLibrary').addEventListener('change',selectLibrarySong);
+  $('songLibraryInstall').addEventListener('click',()=>$('songLibraryFile').click());
+  $('songLibraryFile').addEventListener('change',async e=>{
+    const f=e.target.files?.[0],key=$('songLibrary').value;
+    e.target.value='';
+    if(!f||!RPG_SONGS[key])return;
+    if(f.size>5*1024*1024){$('songLibraryStatus').textContent='That MIDI is over the 5 MB file limit.';return;}
+    try{
+      const buffer=await f.arrayBuffer();
+      const loaded=setLibrarySong(key,buffer,f.name);
+      const serial=++librarySelectionSerial;
+      try{
+        await saveSong(key,f.name,buffer);
+        if(serial!==librarySelectionSerial)return;
+        showLibraryControls(key,true);
+        $('songLibraryStatus').textContent='✓ '+RPG_SONGS[key].title+' saved on this device · '+loaded.notes.length+' notes, '+loaded.tracks.length+' part(s). You can replay it any time.';
+      }catch(err){
+        if(serial!==librarySelectionSerial)return;
+        $('songLibraryStatus').textContent='MIDI opened, but could not save on this device ('+(err.message||'storage issue')+'). You can practice it now; importing again may be needed next time.';
+      }
+    }catch(err){$('songLibraryStatus').textContent=err.message||'This file could not be imported. Please choose a standard .mid MIDI file.';}
+  });
+  $('songLibraryRemove').addEventListener('click',async()=>{
+    const key=$('songLibrary').value,meta=RPG_SONGS[key];if(!meta)return;
+    try{await removeSong(key);++librarySelectionSerial;showLibraryControls(key,false);songPlaceholder(meta);
+      $('songLibraryStatus').textContent='Saved '+meta.title+' MIDI removed from this device. You can add it again any time.';
+    }catch(err){$('songLibraryStatus').textContent='Unable to remove saved MIDI: '+(err.message||'storage error');}
+  });
   $('songFile').addEventListener('change',async e=>{
     const f=e.target.files?.[0];if(!f)return;
     if(f.size>5*1024*1024){$('songFeedback').textContent='This MIDI file is too large (5 MB maximum).';return;}
-    try{const loaded=parseMidi(await f.arrayBuffer(),f.name);setSong(loaded);$('songDemo').value='';
+    try{const loaded=parseMidi(await f.arrayBuffer(),f.name);++librarySelectionSerial;$('songLibrary').value='';showLibraryControls('');setSong(loaded);$('songDemo').value='';
       $('songFeedback').textContent='Imported '+f.name+' · '+songNotes.length+' notes in '+loaded.tracks.length+' track(s).';}
     catch(err){$('songFeedback').textContent=err.message||'Could not read this MIDI file.';}
     e.target.value='';
   });
-  $('songDemo').addEventListener('change',e=>{if(e.target.value)setSong(demoSong(e.target.value));});
+  $('songDemo').addEventListener('change',e=>{if(e.target.value){++librarySelectionSerial;$('songLibrary').value='';showLibraryControls('');setSong(demoSong(e.target.value));}});
   $('songPlay').addEventListener('click',playSong);
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&songPlaying&&$('songMode').value==='watch'){
     songPosition=Math.min(song.duration,(performance.now()-songStartedAt)/1000*Number($('songSpeed').value)/100);

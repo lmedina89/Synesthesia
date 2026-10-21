@@ -1,8 +1,28 @@
-# Garden Notes v0.4 — Light-up Song Studio
+# Garden Notes v0.5 — RPG Song Library + Light-up Song Studio
 
 An iPhone-friendly, no-build-tools-required **piano and kalimba learning app**. All of v0.3's features are preserved: playable octave piano, 17-key kalimba, real recorded Yamaha C5 piano samples when online, note finding, ear training, staff reading, and warmups.
 
-## New in v0.4
+## New in v0.5: RPG song slots
+
+Two named slots now appear **above the demos**:
+
+- **Balamb Garden** (Final Fantasy VIII) — Source: [VGMusic piano MIDI information page](https://www.vgmusic.com/file/b7167903bf8deb1195e96a8b0c1eba7a.html), arrangement by Cerulean Pictures (2004), originally composed by Nobuo Uematsu. The downloadable piano MIDI has separate right-hand and left-hand tracks.
+- **Garden of the Gods** (Chrono Cross) — Source: [Riulyn's RPG Sheet Music Shrine](https://www.riulynrpg.info/), which lists MIDI + printable PDF on the *Garden of the Gods* row, arranged by Riulyn, original score by Yasunori Mitsuda.
+
+**One-time setup for either slot:** Select a song → select **Find free MIDI** → download the source MIDI to your device → return to the app and choose **Add downloaded MIDI**. The app validates the MIDI and saves it privately in your browser's **IndexedDB**. On the same browser/device you can return to that song without re-importing, unless browser website data has been cleared. You can remove or replace your saved MIDI anytime. The general MIDI importer still works for any other music, but those custom imports aren't auto-saved to an RPG slot.
+
+The song names and setup are built in; the third-party arrangements are **not bundled in the ZIP**. VGMusic's [terms](https://www.vgmusic.com/information/legal.php) say music files are copyrighted by their respective authors and require permission to reuse in other projects, and their archive disallows publishing direct download links. Accordingly, this project links to the **source page**, and lets users install their own authorized copy locally. We also have not established a redistribution grant for the Riulyn arrangement. The original compositions remain property of their respective owners.
+
+If private browsing, an unusual `file://` setup, or disabled storage prevents IndexedDB access, the MIDI still works in the current session after import, but might not persist. For best results host Garden Notes over HTTPS (e.g., GitHub Pages) and don't clear the site's data.
+
+### How to use the new songs
+
+- After saving the MIDI, use **Watch & listen** for light-up falling notes, or **Wait for my notes** to step through it at your own pace.
+- In the Balamb Garden MIDI, use **Practice part** to select Right Hand or Left Hand.
+- The arrangement here is **not** guaranteed to be the same as Lara6683's livestream performance.
+- **MP3 or YouTube audio still cannot drive the keyboard light-up mode** without a transcription.
+
+## What was added in v0.4
 
 - Scrollable **88-key** piano and falling-note visualization.
 - **Watch & listen**: light up the right keys and play the MIDI performance on the piano samples.
