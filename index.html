@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#100f22" />
-  <meta name="description" content="Play real grand-piano samples, learn a 17-key kalimba, and follow glowing piano keys for any imported MIDI song." />
-  <title>Garden Notes v0.5 — RPG Song Library</title>
+  <meta name="description" content="Learn piano using a scrolling music staff, live note names, a glowing keyboard, and imported MIDI music. Includes kalimba and grand-piano sounds." />
+  <title>Garden Notes v0.6 — Scrolling Staff & Song Pack</title>
   <style>
     :root { color-scheme: dark; --bg:#100f22; --panel:#1a1932; --panel2:#211f3c; --line:#393454; --ink:#f6f1ff; --muted:#b0a9cd; --lav:#b9a4ff; --gold:#f3c992; --good:#91dfbf; --bad:#ff9bac; --white:#fffaf2; }
     * { box-sizing:border-box; }
@@ -178,6 +178,24 @@
     .song-help{font-size:12px;color:#b9aecf;line-height:1.6;margin:12px 0 0;}
     .song-feedback{font-size:12px;min-height:30px;line-height:1.5;color:#b5e8d3;margin:7px 0 0;}
     @media(max-width:750px){.song-studio{padding:15px 10px}.song-options label{min-width:125px;max-width:none}.song-heading h2{font-size:21px}.song-loaders{align-items:stretch}.song-scroll{margin:0 -1px}}
+    /* v0.6 reading + notation; independently composited canvas is light on iPhone Safari */
+    .score-settings{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:13px 0 9px;}
+    .score-settings label{display:inline-flex;gap:9px;align-items:center;color:#e5dbf8;font-size:12px;font-weight:700;}
+    .score-settings select{font:inherit;color:#f6eeff;background:#302a48;border:1px solid #60557c;border-radius:9px;padding:8px;min-height:38px;}
+    .live-readout{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 14px;background:#24203b;border:1px solid #544b6c;border-radius:13px;margin-bottom:12px;min-height:70px;}
+    .live-name{font-size:clamp(23px,5vw,32px);color:#f4d5a8;letter-spacing:-.04em;font-weight:830;min-width:75px;}
+    .live-notes{font-size:12px;color:#c9bcdf;line-height:1.5;}
+    .live-notes b{color:#e9fbdc;}
+    .score-frame{overflow:hidden;background:#f6f1e7;color:#2a2338;border:1px solid #968da8;border-radius:14px;margin:10px 0;}
+    .score-topline{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;background:#302942;color:#f6eeff;font-size:12px;}
+    .score-topline .score-help{font-size:10px;color:#d1c2eb;}
+    .score-canvas{display:block;width:100%;height:255px;touch-action:pan-y;}
+    .score-footer{background:#ede4f3;padding:8px 12px;color:#534667;font-size:11px;line-height:1.4;}
+    .song-key-label.every{font-size:9px;bottom:7px;}
+    .song-black .song-key-label.every{position:absolute;display:block;top:34px;left:-1px;width:19px;line-height:11px;font-size:8px;color:#fff9ed;font-weight:750;writing-mode:vertical-rl;transform:rotate(180deg);pointer-events:none;}
+    .song-status-small{margin-top:6px;font-size:11px;color:#e5c9ac;line-height:1.45;}
+    .library-actions .export-pack{background:#e2d0ff!important;color:#281c39!important;}
+    @media(max-width:650px){.score-canvas{height:228px}.score-topline{flex-wrap:wrap;}.score-settings{gap:9px}.score-settings label{width:100%;justify-content:space-between}.score-settings select{min-width:160px}.live-readout{padding:9px 12px;min-height:60px}}
     .footer{text-align:center;color:#8880a8;font-size:11px;line-height:1.5;margin:24px auto 0;max-width:690px;}
     @media(max-width:750px){.app{padding:17px 12px 34px;}.topline{margin-bottom:20px}.hero{grid-template-columns:1fr;gap:15px}.scoreboard{justify-content:flex-start}.score{min-width:83px}.toolbar{padding:12px;gap:13px}.instruments{padding:16px 10px 15px;}.lower{grid-template-columns:1fr;gap:12px;margin-top:12px;}.piano{height:clamp(185px,45vw,240px)}.keyboard-container{padding:10px 6px 12px}.piano-black{width:8.1%;}.mode-tabs button{padding:8px 11px;}}
     @media(max-width:400px){.score{padding:9px 13px}.score-value{font-size:21px}.segmented button{padding:9px 11px}.instrument-controls{gap:9px}.tine-row{gap:2px}.kalimba-stage{padding-left:4px;padding-right:4px}.trainer{padding:16px}.mode-tabs button{font-size:10px;padding:8px 7px;}.kalimba-note-grid{gap:4px}.kalimba-note-grid button{font-size:10px}}
@@ -229,7 +247,7 @@
   </section>
 
   <section class="panel song-studio" id="songStudio" aria-label="Song studio">
-    <div class="song-heading"><div><p class="eyebrow">RPG Song Library · Guided practice</p><h2>Follow the glowing keys</h2><p>Choose Balamb Garden or Garden of the Gods, add your downloaded MIDI once, then replay it from your saved song library. You can still import any other MIDI, slow playback, and practice one note at a time.</p></div><span class="song-tag">88-key MIDI trainer</span></div>
+    <div class="song-heading"><div><p class="eyebrow">RPG Song Library · Guided practice</p><h2>Follow the glowing keys</h2><p>Follow a scrolling music staff and glowing keys. Download and add a MIDI once, then create your own standalone personal song pack to keep its notes embedded. Other MIDI files still work.</p></div><span class="song-tag">88-key MIDI trainer</span></div>
     <div class="rpg-library">
       <label for="songLibrary">Your RPG practice songs
         <select id="songLibrary" aria-label="Choose saved RPG song"><option value="">Choose a game soundtrack…</option><option value="balamb">★ Balamb Garden — Final Fantasy VIII</option><option value="gods">Garden of the Gods — Chrono Cross</option></select>
@@ -238,11 +256,11 @@
         <div class="library-actions" id="songLibraryActions" hidden>
           <a id="songLibrarySource" href="https://www.vgmusic.com/file/b7167903bf8deb1195e96a8b0c1eba7a.html" target="_blank" rel="noopener noreferrer">↗ Find free MIDI</a>
           <button id="songLibraryInstall" type="button">＋ Add downloaded MIDI</button>
-          <button id="songLibraryRemove" class="library-remove" type="button" hidden>Remove saved copy</button>
+          <button id="songLibraryRemove" class="library-remove" type="button" hidden>Remove saved copy</button><button id="exportSongPack" class="export-pack" type="button">↓ Save permanent personal copy</button>
           <input id="songLibraryFile" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" hidden aria-label="Choose MIDI for the selected song" />
         </div>
-        <p id="songLibraryStatus" class="library-status" aria-live="polite">Select a song above to set up its dedicated practice slot.</p>
-        <p id="songLibraryHint" class="library-hint">MIDI files are provided by their creators, not repackaged in this app. Once added, your copy stays on this browser/device where storage is available.</p>
+        <p id="songLibraryStatus" class="library-status" aria-live="polite">Choose a song. Locally saved or personally embedded MIDI files open automatically.</p>
+        <p id="songLibraryHint" class="library-hint">The shared release does not bundle third-party MIDI files. Add your personally downloaded MIDIs once, then tap “Save permanent personal copy” to export one HTML file with your songs built in. Keep that HTML private; iPhone Files previews may not run interactive HTML.</p>
       </div>
     </div>
     <div class="song-loaders">
@@ -257,12 +275,22 @@
     <div class="song-buttons"><button class="primary" id="songPlay" type="button">▶ Play song</button><button class="secondary" id="songReset" type="button">↺ Start over</button><button class="secondary" id="songCenter" type="button">◎ Find glowing keys</button></div>
     <input class="song-progress" id="songProgress" type="range" min="0" max="1000" step="1" value="0" aria-label="Song position" />
     <div class="song-now"><strong id="songTitle">Twinkle Twinkle Little Star</strong><span id="songTime">0:00 / 0:00</span></div>
+    <div class="score-settings">
+      <label for="songKeyNames">Key names <select id="songKeyNames" aria-label="Note labels on song keyboard"><option value="pressed">Show when played</option><option value="all">Show every key</option><option value="off">Hide key labels</option></select></label>
+      <label for="songStaffVisible"><input id="songStaffVisible" type="checkbox" checked /> Scrolling musical staff</label>
+    </div>
+    <div class="live-readout" aria-live="polite"><div id="liveNoteName" class="live-name">C4</div><div id="liveNoteDetail" class="live-notes">Press a piano key to see its name and the note on the staff.<br/>Middle C = C4 · Sharps (♯) are black keys.</div></div>
+    <div id="songStaffPanel" class="score-frame" aria-label="Scrolling treble and bass staff for the song">
+      <div class="score-topline"><strong>🎼 Scrolling sheet-music guide</strong><span class="score-help">Right hand • Treble&nbsp;&nbsp; | &nbsp;&nbsp;Left hand • Bass</span></div>
+      <canvas id="songStaffCanvas" class="score-canvas" aria-label="Treble and bass musical staff showing the current notes and upcoming song notes" role="img"></canvas>
+      <div class="score-footer">Notes scroll toward the gold playhead. Shows pitches and approximate note lengths from MIDI, not a publisher-engraved score.</div>
+    </div>
     <div class="song-scroll" id="songScroll" tabindex="0" aria-label="Scroll horizontally to see all 88 piano keys"><div class="song-scroll-inner"><canvas id="songRoll" width="1508" height="176" aria-label="Upcoming notes falling toward the piano keys"></canvas><div id="songKeys" aria-label="Full 88-key playable song keyboard"></div></div></div>
     <div class="song-legend"><span>🟡 <b>Gold</b> = playing</span><span>🟢 <b>Green</b> = your next notes</span><span>🟣 <b>Purple</b> = notes you finished</span></div>
     <div class="song-feedback" id="songFeedback" aria-live="polite">Ready. Press Play to see keys light up.</div>
     <p class="song-help">Supports standard MIDI files with note data, including most piano MIDI downloads. MIDI is not an MP3 or YouTube link: audio recordings don't contain reliable individual key information. Songs with many instruments may be easier to learn by selecting a single track. The kalimba above still works; notes in its range can light up during playback too.</p>
   </section>
-  <p class="footer">Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
+  <p class="footer">v0.6 · Scrolling staff and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
 </main>
 <script>
 'use strict';
@@ -426,7 +454,7 @@
   function score(){ $('correctCount').textContent=state.correct; $('streakCount').textContent=state.best;persist(); }
   function writeMessage(head,title,sub,feedback='',bad=false){$('challengeKicker').textContent=head;$('challengeNote').textContent=title;$('challengeSub').textContent=sub;const a=$('answer');a.textContent=feedback;a.classList.toggle('error',bad);}
   function handleNote(note){
-    playNote(note);flash(note);
+    playNote(note);flash(note);readPlayedNotes([noteMidi(note)]);
     if(songPlaying&&$('songMode').value==='step')acceptSongPracticeNote(noteMidi(note));
     if(state.drillIndex>=0){
       const expected = warmupSequence()[state.drillIndex];
@@ -491,6 +519,12 @@
   }
 
   // ---- Garden Notes Song Studio: local, dependency-free Standard MIDI File parser ----
+  // A private HTML file exported from this app can carry user-provided MIDI bytes inside
+  // a JSON script element. No network upload: exporting is performed entirely in-browser.
+  let PACKED_SONGS={};
+  try{PACKED_SONGS=JSON.parse($('private-song-pack')?.textContent||'{}')||{};}catch(e){PACKED_SONGS={};}
+  function bufferFromBase64(base64){const binary=atob(base64);const arr=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)arr[i]=binary.charCodeAt(i);return arr.buffer;}
+  function bufferToBase64(data){const bytes=new Uint8Array(data),size=8192;let s='';for(let i=0;i<bytes.length;i+=size)s+=String.fromCharCode(...bytes.subarray(i,i+size));return btoa(s);}
   const RPG_SONGS={
     balamb:{title:'Balamb Garden',game:'Final Fantasy VIII',source:'https://www.vgmusic.com/file/b7167903bf8deb1195e96a8b0c1eba7a.html',help:'Open the VGMusic song page and download its piano MIDI. It contains separate Right Hand and Left Hand tracks.'},
     gods:{title:'Garden of the Gods',game:'Chrono Cross',source:'https://www.riulynrpg.info/',help:'On Riulyn’s page, find Chrono Cross → Garden of the Gods and download the MIDI from its row.'}
@@ -535,13 +569,13 @@
       tx.onabort=()=>reject(tx.error||Error('MIDI removal cancelled.'));
     });}finally{db.close();}
   }
-  function showLibraryControls(key,installed=false){
+  function showLibraryControls(key,installed=false,embedded=false){
     const meta=RPG_SONGS[key];
     $('songLibraryActions').hidden=!meta;
-    if(!meta){$('songLibraryStatus').textContent='Select a song above to set up its dedicated practice slot.';return;}
+    if(!meta){$('songLibraryStatus').textContent='Choose a song. Locally saved or personally embedded MIDI files open automatically.';return;}
     $('songLibrarySource').href=meta.source;
-    $('songLibraryInstall').textContent=installed?'↥ Replace saved MIDI':'＋ Add downloaded MIDI';
-    $('songLibraryRemove').hidden=!installed;
+    $('songLibraryInstall').textContent=installed?'↥ Replace MIDI':'＋ Add downloaded MIDI';
+    $('songLibraryRemove').hidden=!installed||embedded;
   }
   function songPlaceholder(meta){
     stopSong();song=null;songNotes=[];selectedSongNotes=[];songGroups=[];songPosition=0;songActive.clear();
@@ -568,12 +602,17 @@
     songPlaceholder(meta);
     $('songLibraryStatus').textContent='Looking for your saved '+meta.title+' MIDI…';
     try{
-      const saved=await savedSong(key);
+      // Use an explicitly saved replacement first; otherwise read the MIDI from the user's
+      // exported private HTML bundle, if present. Both are actual MIDI bytes.
+      let saved=null;
+      try{saved=await savedSong(key);}catch(err){if(!PACKED_SONGS[key])throw err;}
       if(serial!==librarySelectionSerial)return;
-      if(saved){
-        const loaded=setLibrarySong(key,saved.buffer,saved.filename);
-        showLibraryControls(key,true);
-        $('songLibraryStatus').textContent='✓ '+meta.title+' is saved on this device · '+loaded.notes.length+' piano notes. Ready to learn!';
+      const packed=!saved&&PACKED_SONGS[key];
+      if(saved||packed){
+        const bytes=saved?saved.buffer:bufferFromBase64(packed.base64);
+        const loaded=setLibrarySong(key,bytes,saved?saved.filename:packed.filename);
+        showLibraryControls(key,true,!!packed);
+        $('songLibraryStatus').textContent='✓ '+meta.title+(packed?' is embedded permanently in this personal HTML copy':' is saved on this device')+' · '+loaded.notes.length+' piano notes. Ready to learn!';
       }else{
         $('songLibraryStatus').textContent=meta.help+' Then tap “Add downloaded MIDI” below to save it here for future sessions.';
         $('songFeedback').textContent=meta.title+' is ready for a one-time MIDI import.';
@@ -596,6 +635,104 @@
     for(let i=SONG_FIRST;i<n;i++)if(!midiSharp(i))whites++;
     return midiSharp(n)?whites*SONG_W : whites*SONG_W+SONG_W/2;
   }
+
+  // --- v0.6 live key names + continuously scrolling pitch staff ---
+  const keyLabelStore='garden-notes-score-labels-v1';
+  const scoreCanvas=$('songStaffCanvas'), scoreContainer=$('songStaffPanel');
+  let lastTouchedNotes=[], scoreLabels='pressed';
+  try{scoreLabels=localStorage.getItem(keyLabelStore)||'pressed';}catch(e){}
+  if(!['pressed','all','off'].includes(scoreLabels))scoreLabels='pressed';
+  $('songKeyNames').value=scoreLabels;
+  function updateSongKeyLabels(){
+    for(const [n,key] of songKeys){
+      const old=key.querySelector('.song-key-label');if(old)old.remove();
+      if(scoreLabels==='all'||(scoreLabels==='pressed'&&n%12===0)){
+        const span=document.createElement('span');span.className='song-key-label'+(scoreLabels==='all'?' every':'');span.textContent=midiName(n);key.append(span);
+      }
+    }
+  }
+  $('songKeyNames').addEventListener('change',e=>{scoreLabels=e.target.value;try{localStorage.setItem(keyLabelStore,scoreLabels);}catch(err){}updateSongKeyLabels();});
+  $('songStaffVisible').addEventListener('change',e=>{scoreContainer.hidden=!e.target.checked;if(e.target.checked)requestAnimationFrame(()=>renderSongStaff(songPosition));});
+  function readPlayedNotes(notes){
+    lastTouchedNotes=notes.filter(n=>Number.isFinite(n)&&n>=21&&n<=108).slice(-10);
+    const names=lastTouchedNotes.map(midiName);
+    $('liveNoteName').textContent=names.length?names.join(' + '):'—';
+    $('liveNoteDetail').innerHTML=lastTouchedNotes.length?(lastTouchedNotes.length>1?'<b>Chord / multiple notes</b>':'<b>'+ (lastTouchedNotes[0]===60?'Middle C · ':'')+'Note played</b>')+' · '+lastTouchedNotes.map(n=>midiSharp(n)?midiName(n).replace('#','♯')+' / '+NOTES[(n+1)%12]+'♭'+Math.floor(n/12-1):midiName(n)).join(' · '):'Press any piano key to identify it.';
+    renderSongStaff(songPosition);
+  }
+  function songStaffHand(note){
+    const meta=song?.tracks?.find(t=>t.id===note.track)?.name?.toLowerCase()||'';
+    if(/left|bass|lower|lh\b/.test(meta))return 'bass';
+    if(/right|treble|upper|rh\b|melody/.test(meta))return 'treble';
+    return note.midi>=60?'treble':'bass';
+  }
+  function scorePitch(n,clef,bottom){
+    const natural=[0,2,4,5,7,9,11];const pc=n%12;
+    let k=0;for(let i=0;i<7;i++)if(natural[i]<=pc)k=i;
+    const diatonic=(Math.floor(n/12)-1)*7+k;
+    const anchor=clef==='treble'?(4*7+2):(2*7+4); // E4 or G2
+    return {y:bottom-(diatonic-anchor)*6,sharp:natural[k]!==pc};
+  }
+  function renderSongStaff(at=songPosition){
+    if(scoreContainer.hidden)return;
+    const cssWidth=Math.max(250,scoreCanvas.clientWidth||330),cssHeight=scoreCanvas.clientHeight||255;
+    const scale=Math.min(2,window.devicePixelRatio||1);
+    const devW=Math.round(cssWidth*scale),devH=Math.round(cssHeight*scale);
+    if(scoreCanvas.width!==devW||scoreCanvas.height!==devH){scoreCanvas.width=devW;scoreCanvas.height=devH;}
+    const ctx=scoreCanvas.getContext('2d');if(!ctx)return;ctx.setTransform(scale,0,0,scale,0,0);
+    const w=cssWidth,h=cssHeight,factor=h/255;
+    ctx.clearRect(0,0,w,h);ctx.fillStyle='#fbf7ed';ctx.fillRect(0,0,w,h);
+    ctx.save();ctx.scale(1,factor);
+    const x0=Math.min(112,Math.max(92,w*.29));const speed=w<480?70:90;
+    const staffTop=[56,69,82,95,108], staffBass=[167,180,193,206,219];
+    for(const ys of [staffTop,staffBass]){ctx.strokeStyle='#8f819a';ctx.lineWidth=1;
+      for(const yy of ys){ctx.beginPath();ctx.moveTo(12,yy);ctx.lineTo(w-10,yy);ctx.stroke();}}
+    ctx.font='bold 11px system-ui';ctx.fillStyle='#675675';ctx.fillText('TREBLE',15,19);ctx.fillText('BASS',15,147);
+    // Clef ornaments plus text fallback keep the view legible on devices missing notation fonts.
+    ctx.font='60px "Apple Symbols","Noto Music","DejaVu Sans",serif';ctx.fillStyle='#4e3b5f';
+    ctx.fillText('𝄞',12,106);ctx.font='49px "Apple Symbols","Noto Music","DejaVu Sans",serif';ctx.fillText('𝄢',18,215);
+    // Current-time marker stays fixed; music moves behind it.
+    ctx.fillStyle='#f5e2b0';ctx.fillRect(x0-3,25,6,219);ctx.fillStyle='#7a5a27';ctx.font='bold 10px system-ui';ctx.fillText('NOW',x0-17,17);
+    const visibleBack=2.2,visibleAhead=(w-x0)/speed+.5;
+    let drawable=[];
+    if(song&&selectedSongNotes.length){
+      const from=lowerBoundSong(selectedSongNotes,at-visibleBack), to=at+visibleAhead;
+      for(let i=Math.max(0,from-15);i<selectedSongNotes.length;i++){
+        const n=selectedSongNotes[i];if(n.start>to)break;
+        if(n.end>=at-visibleBack)drawable.push(n);
+        if(drawable.length>250)break;
+      }
+    }
+    for(const note of drawable){
+      const x=x0+(note.start-at)*speed;if(x<-10||x>w+14)continue;
+      const isBass=songStaffHand(note)==='bass';const clef=isBass?'bass':'treble';
+      const low=isBass?219:108,top=isBass?167:56;
+      const pitch=scorePitch(note.midi,clef,low);
+      // Limit exotic out-of-staff pitches to maintain a useful readable view.
+      const y=Math.max(top-28,Math.min(low+24,pitch.y));
+      const playing=note.start<=at&&note.end>at;
+      const active=playing||$('songMode').value==='step'&&songPlaying&&songGroups[songGroupIndex]?.midis.includes(note.midi);
+      const color=active?'#21866f':isBass?'#815cc1':'#387eaa';
+      if(y>low)for(let yy=low+13;yy<=y+2;yy+=13){ctx.strokeStyle='#756783';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(x-12,yy);ctx.lineTo(x+13,yy);ctx.stroke();}
+      if(y<top)for(let yy=top-13;yy>=y-2;yy-=13){ctx.strokeStyle='#756783';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(x-12,yy);ctx.lineTo(x+13,yy);ctx.stroke();}
+      if(pitch.sharp){ctx.fillStyle=color;ctx.font='bold 19px serif';ctx.fillText('♯',x-21,y+7);}
+      const duration=Math.max(.06,note.end-note.start);
+      ctx.fillStyle=color;ctx.strokeStyle=color;ctx.lineWidth=1.6;
+      ctx.beginPath();ctx.ellipse(x,y,8.3,5.8,-.3,0,Math.PI*2);
+      if(duration>.95){ctx.fillStyle='#fbf7ed';ctx.fill();ctx.stroke();}else ctx.fill();
+      ctx.beginPath();ctx.moveTo(x+7.5,y);ctx.lineTo(x+7.5,y-28);ctx.stroke();
+      if(duration<.35){ctx.beginPath();ctx.moveTo(x+7,y-28);ctx.quadraticCurveTo(x+22,y-20,x+14,y-8);ctx.stroke();}
+      if(scoreLabels!=='off'&&active){ctx.font='bold 10px system-ui';ctx.fillStyle='#135741';ctx.fillText(midiName(note.midi),x-11,y-13);}
+    }
+    if(!drawable.length&&lastTouchedNotes.length){
+      for(const n of lastTouchedNotes){const bass=n<60,low=bass?219:108,top=bass?167:56,p=scorePitch(n,bass?'bass':'treble',low);const y=Math.max(top-28,Math.min(low+24,p.y));
+        ctx.fillStyle='#168871';ctx.beginPath();ctx.ellipse(x0,y,9,6,-.25,0,Math.PI*2);ctx.fill();ctx.fillStyle='#365b53';ctx.font='bold 10px system-ui';ctx.fillText(midiName(n),x0+14,y+4);}
+    }
+    if(!drawable.length&&!lastTouchedNotes.length){ctx.fillStyle='#897895';ctx.font='12px system-ui';ctx.fillText('Play a key or start a song to see notes here.',Math.max(65,x0+18),130);}
+    ctx.restore();
+  }
+  window.addEventListener('resize',()=>renderSongStaff(songPosition),{passive:true});
+
   function setupSongKeys(){
     for(let n=SONG_FIRST;n<=SONG_LAST;n++)if(!midiSharp(n)){
       const key=document.createElement('button');key.type='button';key.className='song-white';
@@ -747,7 +884,7 @@
     $('songProgress').value=Math.round(1000*p/Math.max(.1,song.duration));
     songNextIndex=lowerBoundSong(selectedSongNotes,p-.015);
     songActive=activeSongPitches(p);
-    drawSongRoll(p);renderSongHighlights();
+    drawSongRoll(p);renderSongHighlights();renderSongStaff(p);
   }
   function activeSongPitches(at){
     const lo=lowerBoundSong(selectedSongNotes,at-songMaxDuration-.01),hi=lowerBoundSong(selectedSongNotes,at+.00001);
@@ -818,7 +955,7 @@
   }
   function frameSong(now){if(!songPlaying||!song)return;
     const step=$('songMode').value==='step';
-    if(step){drawSongRoll(songGroups[songGroupIndex]?.start??songPosition);renderSongHighlights();return;}
+    if(step){drawSongRoll(songGroups[songGroupIndex]?.start??songPosition);renderSongHighlights();renderSongStaff(songPosition);return;}
     songPosition=Math.max(0,(now-songStartedAt)/1000*Number($('songSpeed').value)/100);
     let played=0;const pitched=[];
     while(songNextIndex<selectedSongNotes.length&&selectedSongNotes[songNextIndex].start<=songPosition){
@@ -831,7 +968,7 @@
     songActive=activeSongPitches(songPosition);
     $('songTime').textContent=fmtTime(songPosition)+' / '+fmtTime(song.duration);
     $('songProgress').value=Math.min(1000,Math.round(songPosition/song.duration*1000));
-    drawSongRoll(songPosition);renderSongHighlights();
+    drawSongRoll(songPosition);renderSongHighlights();renderSongStaff(songPosition);
     if(songPosition>=song.duration){stopSong();setSongPosition(song.duration);$('songFeedback').textContent='Song finished! Replay it or try the note-by-note practice mode.';return;}
     songAnimation=requestAnimationFrame(frameSong);
   }
@@ -847,7 +984,7 @@
       const g=songGroups[songGroupIndex];
       if(g)focusSongKeys(g.midis,true);
       $('songFeedback').textContent='Play the GREEN key'+(g?.midis.length>1?'s together (or one at a time)':'')+'. The song will wait for you.';
-      drawSongRoll(songPosition);renderSongHighlights();
+      drawSongRoll(songPosition);renderSongHighlights();renderSongStaff(songPosition);
     }else{
       songStartedAt=performance.now()-songPosition*1000/(Number($('songSpeed').value)/100);
       songNextIndex=lowerBoundSong(selectedSongNotes,songPosition-.015);
@@ -856,7 +993,7 @@
     }
     updateSongButtons();
   }
-  function handleSongKey(n){soundMidi(n,.55);
+  function handleSongKey(n){soundMidi(n,.55);readPlayedNotes([n]);
     // Ensure a tapped note also lights up while not following a song.
     const key=songKeys.get(n);if(key){key.classList.add('song-done');setTimeout(()=>{if(!songPlaying)key.classList.remove('song-done');else renderSongHighlights();},220);}
     acceptSongPracticeNote(n);
@@ -873,11 +1010,40 @@
       songPosition=next.start;$('songProgress').value=Math.round(1000*songPosition/song.duration);
       $('songTime').textContent=fmtTime(songPosition)+' / '+fmtTime(song.duration);
       $('songFeedback').textContent='✓ Correct! Next: '+next.midis.map(midiName).join(' + ')+'.';
-      focusSongKeys(next.midis,true);drawSongRoll(songPosition);
+      focusSongKeys(next.midis,true);drawSongRoll(songPosition);renderSongStaff(songPosition);
     }else{$('songFeedback').textContent='Good! '+(g.midis.length-songGroupDone.size)+' more note(s) in this chord.';}
     renderSongHighlights();
   }
-  setupSongKeys();
+  setupSongKeys();updateSongKeyLabels();
+
+  async function exportPrivateSongPack(){
+    const button=$('exportSongPack');button.disabled=true;
+    $('songLibraryStatus').textContent='Preparing your private, permanent song copy…';
+    try{
+      const merged={...PACKED_SONGS};
+      for(const key of Object.keys(RPG_SONGS)){
+        try{const saved=await savedSong(key);if(saved?.buffer)merged[key]={filename:saved.filename||key+'.mid',base64:bufferToBase64(saved.buffer)};}
+        catch(e){/* Storage blocked? Existing embedded songs still export. */}
+      }
+      if(!Object.keys(merged).length){
+        $('songLibraryStatus').textContent='No downloaded MIDI files are saved yet. First add at least one song, then create your permanent personal copy.';return;
+      }
+      const clone=document.documentElement.cloneNode(true);
+      for(const selector of ['#piano','#tineRow','#kalimbaNoteGrid','#songKeys','#notesLine','#staffScore'])clone.querySelector(selector)?.replaceChildren();
+      const track=clone.querySelector('#songTrack');if(track)track.replaceChildren(new Option('All notes','all'));
+      const old=clone.querySelector('#private-song-pack');old?.remove();
+      const data=document.createElement('script');data.id='private-song-pack';data.type='application/json';data.textContent=JSON.stringify(merged).replace(/</g,'\\u003c');
+      clone.querySelector('head').append(data);
+      const out='<!DOCTYPE html>\n'+clone.outerHTML;
+      const blob=new Blob([out],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.6_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),15000);
+      $('songLibraryStatus').textContent='✓ Exported private HTML with '+Object.keys(merged).length+' embedded MIDI song(s). Keep it private; the iPhone Files preview may not run interactive HTML.';
+    }catch(e){$('songLibraryStatus').textContent='Could not create private song copy: '+(e.message||'export failed');}
+    finally{button.disabled=false;}
+  }
+  $('exportSongPack').addEventListener('click',exportPrivateSongPack);
+
   $('songLibrary').addEventListener('change',selectLibrarySong);
   $('songLibraryInstall').addEventListener('click',()=>$('songLibraryFile').click());
   $('songLibraryFile').addEventListener('change',async e=>{
