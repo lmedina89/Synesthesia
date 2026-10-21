@@ -58,16 +58,16 @@ export const Midi = (() => {
     for(const e of noteEvents){lastTick=Math.max(lastTick,e.tick);const key=e.track+':'+e.channel+':'+e.pitch;
       if(e.down){if(!held.has(key))held.set(key,[]);held.get(key).push(e);}
       else if(held.get(key)?.length){const start=held.get(key).shift();
-        if(start.pitch>=SONG_FIRST&&start.pitch<=SONG_LAST)finished.push({midi:start.pitch,start:secAt(start.tick),end:Math.max(secAt(e.tick),secAt(start.tick)+.07),track:start.track,velocity:start.vel});
+        if(start.pitch>=SONG_FIRST&&start.pitch<=SONG_LAST)finished.push({midi:start.pitch,start:secAt(start.tick),end:Math.max(secAt(e.tick),secAt(start.tick)+.07),track:start.track,velocity:start.vel,startBeat:start.tick/division,endBeat:e.tick/division});
       }
     }
     for(const stacks of held.values())for(const start of stacks){
-      if(start.pitch>=SONG_FIRST&&start.pitch<=SONG_LAST)finished.push({midi:start.pitch,start:secAt(start.tick),end:secAt(Math.max(start.tick+division/2,lastTick)),track:start.track,velocity:start.vel});
+      if(start.pitch>=SONG_FIRST&&start.pitch<=SONG_LAST)finished.push({midi:start.pitch,start:secAt(start.tick),end:secAt(Math.max(start.tick+division/2,lastTick)),track:start.track,velocity:start.vel,startBeat:start.tick/division,endBeat:Math.max(start.tick+division/2,lastTick)/division});
     }
     const end=finished.reduce((m,n)=>Math.max(m,n.end),0);
     if(!finished.length)fail('no playable piano notes (A0–C8) found');
     if(end>14400)fail('song exceeds four hours');
-    return {name:fileName.replace(/\.(mid|midi)$/i,''),notes:finished,tracks:tracks.filter(t=>t.notes),duration:end,source:'MIDI'};
+    return {name:fileName.replace(/\.(mid|midi)$/i,''),notes:finished,tracks:tracks.filter(t=>t.notes),duration:end,source:'MIDI',ticksPerQuarter:division};
   }
   return Object.freeze({parseMidi,songTempoToSeconds});
 })();

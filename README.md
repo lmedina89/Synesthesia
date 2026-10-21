@@ -1,46 +1,28 @@
-# Garden Notes v0.13.1 — MusicXML Score Foundations
+# Garden Notes v0.13.2 — VexFlow Engraving Integration (candidate)
 
-This is a focused follow-up based directly on the preserved v0.13 developer source. It is an **incremental, tested music-notation update**, not a rewrite or a completed commercial engraving system.
+An incremental release from v0.13.1: the scrolling staff now **attempts to use VexFlow 4.2.2** for conventional musical glyphs, barlines, clefs, ledger lines, and accidentals. The existing Canvas pitch guide activates automatically if VexFlow is unavailable or cannot lay out the notes. The piano keyboard, audio engine, imported MIDI library, guided practice, kalimba, and private song exports are preserved.
 
-## Install / use
+## Install
 
-1. Download `Garden_Notes_v0.13.1_GitHub_Ready.zip`; extract and publish **all contents** at the root of your existing GitHub Pages deployment. Retain the `assets/` directory and `index.html`.
-2. Try an uncompressed **MusicXML `.musicxml` / `.xml`** score using **Import MIDI or MusicXML**. One small, original `score-demo.musicxml` test score is included in the ZIP; download it from the files you extracted and import it for a working example.
-3. MusicXML imports display written measure boundaries, rests, note durations, clefs, key/time signatures and pitches in a score-aware scrolling view. The same events drive the audio, falling notes, keyboard highlights and note-by-note practice. MIDI files still use the existing *pitch-and-timing* guide: MIDI does not encode a faithful printed score.
-4. To continue using the personal RPG library, re-use your previously saved MIDI arrangements. The shared release does **not** include third-party RPG MIDI content. Personal MIDI exports remain private standalone HTML files; don't publish those exports.
+1. Save a copy of your v0.13.1 deployment and your personal MIDI songs first.
+2. Extract the `Garden_Notes_v0.13.2_GitHub_Ready.zip` and upload **all** files, including the `assets` folder, to GitHub Pages with `index.html` at the root.
+3. Refresh Safari and load a song. The score caption says either `Engraved MusicXML score · VexFlow`, `MIDI transcription · inferred...`, or `Pitch guide fallback`.
+4. For your preferred Balamb Garden MIDI, check the 0:30–0:46 passage and whether notes on both staves match the piano roll. If the caption says fallback, the score is **not** showing VexFlow.
 
-## v0.13.1 notation accuracy and layout fixes
+## Third-party dependency
 
-- Added a separately tested **pure score-layout module** for pitch geometry, collision-resistant note spacing, chords, and accidentals. Audio timings are never modified; horizontal visual positions are stretched only to make notes legible.
-- Reworked the MIDI pitch guide and the MusicXML score view: wider space between treble and bass, protected clef/label gutters, single shared stems for simple chords, better ledger lines, and more legible notehead spacing.
-- Corrected MusicXML accidental scope by track/staff within a measure.
-- The live key readout now identifies the **last key touched**, rather than incorrectly implying it shows the most recently sounding playback note.
-- Added unit tests for chord collisions, accidentals, staff positions and note timing, plus a dense two-hand MIDI visual regression on an iPhone-sized viewport.
-- Preserved the existing audio playback, song import, MIDI storage, kalimba, immersive mode and single-file personal song export.
+VexFlow v4.2.2 (MIT license; https://github.com/0xfe/vexflow) is loaded at runtime from a version-pinned jsDelivr script URL. This environment could not download the library into the GitHub ZIP, so **the engraved display requires the browser to access that CDN**. The piano and falling-note trainer do not depend on this library. A private standalone export also refers to the same CDN and retains the fallback.
 
-## Exactly what changed
+## Musical accuracy
 
-- `src/core/musicxml.js` — bounded browser MusicXML parser handling uncompressed `score-partwise` documents, two or more staves, voices, chords, rest events, key/time changes, tempo changes and ties for audible note durations. It normalizes notation to the existing timed MIDI-shaped note model without losing score metadata. Standard MusicXML external DTD declarations are stripped safely, not fetched; custom entities are rejected.
-- `src/visual/score-renderer.js` — separate, scrolling canvas renderer for imported MusicXML with true staff pitch positions, ledger lines, printed measure boundaries/numbers, simple rest glyphs and notehead values, meter/key display and current-note highlighting. It culls offscreen events and caches track filters.
-- `src/ui/song-notation.js` — switches between the MusicXML score-aware renderer and the previous MIDI pitch guide automatically.
-- `src/ui/song-library.js` — recognizes `.musicxml` and `.xml` in generic song import while retaining all previous MIDI personal library features.
-- New example MusicXML file and headless desktop/mobile regression checks; existing v0.12 unit and browser tests are still part of the gate.
+- **MusicXML**: uses the imported score's pitches, clefs, measures, meter and voices when the features fit our supported subset; straightforward durations and rests are rendered by VexFlow.
+- **MIDI-only**: retains true pitch and original MIDI tick timings, but assigns treble/bass heuristically and guesses meter and notated rhythmic grouping. The display explicitly calls itself an inferred transcription. It is **not** publisher-authoritative sheet music.
+- Complex multi-voice collisions, cross-staff writing, beam grouping, tuplets, slurs, grace notes, repeats, and difficult quantization still require work. Importantly, the MIDI parser now retains `startBeat`/`endBeat` for notation while unchanged seconds continue to drive audio.
 
-## Important limitations (don't mistake this for finished engraving)
+## Development
 
-- This is **NOT VexFlow or equivalent professional engraving**. A proven library could not be vendored within this build environment, so this release focuses on verified layout corrections rather than claiming full engraving. Printed beams, multi-voice collision avoidance, tuplets, slurs, articulations, layout breaks and repeat signs are not rendered fully. Basic notes, flags and rests are drawn; the score view is designed to be useful and synchronized, not to replace publisher notation.
-- Compressed `.mxl` is **not supported yet**. In MuseScore, export **uncompressed MusicXML**. Lyrics, instrument transposition, percussion, measure-repeat directives and complex scores are not fully supported.
-- The private-song HTML exporter embeds downloaded **MIDI**, not imported MusicXML; importing MusicXML currently lasts for the open browser session.
-- Actual iPhone Safari audio, touch behavior and real-origin IndexedDB persistence still require physical-device acceptance testing. Headless mobile emulation isn't an iPhone.
+- `python scripts/build.py` — build external ES modules and portable personal standalone HTML.
+- `bash scripts/validate.sh` — 38 passing Node unit tests plus desktop/mobile browser regression tests, simulated audio interruptions, MIDI and MusicXML imports, private MIDI pack round-trips, and a VexFlow **adapter** test against an API-compatible test double.
+- The **real third-party VexFlow bundle could not be loaded or visually tested in this offline environment**, and the app hasn't yet been checked on physical iPhone Safari. Do not treat the engraver as final until the actual device confirms the result.
 
-## Developer workflow
-
-Requires Python 3, Node 22+, TypeScript compiler 5.x. Browser tests also require Playwright and Chromium, plus the pre-existing Python test requirements.
-
-```bash
-python scripts/build.py
-bash scripts/validate.sh
-python scripts/package.py
-```
-
-The released `index.html` is a small shell loading **22 real ES modules and external CSS**. The generated `standalone.html` is a separate private-export artifact built from the same source modules. TypeScript migration remains incremental (two existing `.ts` files). No VexFlow runtime package or network dependency has been added for sheet music.
+No external Balamb Garden or Garden of the Gods MIDI has been bundled. Existing personally imported MIDI is preserved by the current browser storage scheme.

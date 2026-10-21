@@ -1,4 +1,5 @@
 import {ScoreRenderer} from '../visual/score-renderer.js';
+import {VexflowRenderer} from '../visual/vexflow-renderer.js';
 // Song notation view: note labels, live note readout and scrolling staff.
 // Musical positioning remains in core/notation and visual/staff-renderer.
 export function createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,getContext}) {
@@ -18,7 +19,7 @@ export function createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,get
     }
   }
   $('songKeyNames').addEventListener('change',e=>{scoreLabels=e.target.value;try{localStorage.setItem(keyLabelStore,scoreLabels);}catch(err){}updateSongKeyLabels();});
-  $('songStaffVisible').addEventListener('change',e=>{scoreContainer.hidden=!e.target.checked;if(e.target.checked)requestAnimationFrame(()=>renderSongStaff(songPosition));});
+  $('songStaffVisible').addEventListener('change',e=>{scoreContainer.hidden=!e.target.checked;if(e.target.checked)requestAnimationFrame(()=>renderSongStaff(getContext().songPosition));});
   function readPlayedNotes(notes){
     lastTouchedNotes=notes.filter(n=>Number.isFinite(n)&&n>=21&&n<=108).slice(-10);
     const names=lastTouchedNotes.map(midiName);
@@ -31,6 +32,12 @@ export function createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,get
     const {song,selectedSongNotes,songPlaying,songGroups,songGroupIndex}=getContext();
     const stepActive = $('songMode').value==='step'&&songPlaying
       ? new Set(songGroups[songGroupIndex]?.midis||[]) : new Set();
+    if(VexflowRenderer.render({song,notes:selectedSongNotes,at,canvas:scoreCanvas})){
+      $('scoreRenderStatus').textContent=song?.score?.type==='MusicXML'?'Engraved MusicXML score · VexFlow':'MIDI transcription · inferred meter, rhythm and staff assignment';
+      return;
+    }
+    VexflowRenderer.reset(scoreCanvas);
+    $('scoreRenderStatus').textContent='Pitch guide fallback · VexFlow unavailable (internet required)';
     if(song?.score?.type==='MusicXML'){
       ScoreRenderer.render({at,score:song.score,canvas:scoreCanvas,notes:selectedSongNotes,stepActive,labels:scoreLabels});
     }else{
