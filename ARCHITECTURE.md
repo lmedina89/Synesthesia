@@ -1,41 +1,37 @@
-# Garden Notes v0.12 architecture decisions
+# Garden Notes v0.13 — music notation module architecture
 
-### Baseline and constraints
-v0.11 remains unchanged in the provided previous release ZIPs. v0.12 maintains the native ES module deploy, no mandatory runtime framework, consistent private standalone export, identical IndexedDB/localStorage schema, no redistributed commercial MIDI arrangements, and the existing UI and iPhone-sized immersive view.
+## Boundary: normalized timed notes vs printed musical score
 
-### Dependency direction
+`MusicXML.parseMusicXML(xml)` returns `song = {name,source,notes,tracks,duration,score}`:
+
+- `notes[]` follows the pre-existing transport contract `{midi,start,end,track,velocity}`. Starts/ends are in **seconds** after a piecewise tempo-map conversion. Tied attacks are joined for audio.
+- `score.notes[]` retains note-by-note pitch spellings, original written duration in quarter beats, clef, voice, part, staff track, measures, and tie status.
+- `score.rests[]` retains original rests and durations.
+- `score.measures[]` carries index/number, start/end, written meter and fifths in the key signature.
+- UI chooses the score-aware renderer **only when `song.score.type === 'MusicXML'`**; the original MIDI renderer is preserved as-is. Both use the same `songPosition` computed from the Web Audio transport, including pause/seek/speed.
+
+## Source files
 
 ```
-src/app.js (composition root, DOM bindings, shared preferences)
-    |-- app/preferences.ts (typed, pure validation/persistence)
-    |-- audio/engine.js
-    |-- ui/beginner-trainer.js
-    |-- ui/song-studio.js (session owner)
-          |-- core/song-state.ts (typed, pure song helpers)
-          |-- core/{transport,session,catalog,notation,theory}.js
-          |-- visual/{roll-renderer,staff-renderer}.js
-          |-- ui/{song-notation,song-keyboard,focus-mode,song-library}.js
-                    |-- storage/song-store.js
+src/core/musicxml.js              # pure timeline/notation parsing after DOMParser
+src/visual/score-renderer.js      # score-aware canvas, independent from MIDI renderer
+src/visual/staff-renderer.js      # preserved existing MIDI pitch guide
+src/ui/song-notation.js           # presentation router
+src/ui/song-library.js            # MusicXML or MIDI import
+src/ui/song-studio.js             # unchanged transport/session owner
+scripts/build.py                 # real native ESM public build + portable standalone
 ```
 
-Song state is now private to the Song Studio factory instead of being stored in the application root; its outward callback interface is intentionally narrow. The beginner trainer has only a tiny injected `songCallbacks` adapter. Its persistent preferences are handled by a typed stable-schema adapter; no UI component writes the v1 preference key directly.
+## Invariants and checks
 
-### Incremental TypeScript
-Only `app/preferences.ts` and `core/song-state.ts` are migrated. These compile with `tsc --strict` into `.compiled/` before public/standalone packaging. The remaining JavaScript is *not* type checked as a whole, so this milestone must not be called a complete TypeScript conversion.
+- Original 30 unit tests pass, plus existing desktop/mobile, audio timing, simulated iOS interruption, personal-song export, and public-to-private roundtrip tests.
+- The new `tests/musicxml_browser.py` verifies dual staff import, four-quarter meter, one-sharp key signature, half/whole/eighth note values, rests, 90 BPM piece timing, standard MusicXML DTD handling, entity rejection, mobile rendering, seek, and guided practice.
+- Public deploy still loads separate JS modules. The private standalone bundle is generated from the same files. No third-party RPG arrangements are distributed.
+- Original local song storage keys unchanged. Save a backup of personal MIDI files before upgrading.
 
-### Invariants and tests
+## Next work (not completed here)
 
-- Identical original key `garden-notes-v1` for preferences; schema compatible.
-- IndexedDB schema and song parser unchanged.
-- Every public relative ESM import resolves within `dist/assets/`.
-- The original 24 v0.11 unit tests must continue passing, in addition to typed helpers and existing browser/integration checks.
-- Preserve public modular HTML and separate personal standalone output generated from the exact same source.
-- No new song content without licensing approval.
-- Real-origin persistent storage and actual hardware Safari playback are still outstanding tests, not validated facts.
-
-### Follow-up work
-
-1. Continue splitting transport/UI event wiring from `ui/song-studio.js` only when backed by tests; avoid turning one file-size target into gratuitous modules.
-2. Extend TypeScript typing through the song-session interfaces and audio scheduler, measuring type errors and regression impact before enabling strict `checkJs` across legacy code.
-3. Add actual-origin production smoke tests in CI/CD (real `http(s)`, IndexedDB persistence/reload, fetch errors, CSP checks) and physical iPhone acceptance.
-4. After stability, improve staff engraving and practical section-loop practice; don't introduce unrelated features during refactors.
+1. Evaluate and vendor a proper notation engraving library for beaming, tuplets, voices, horizontal spacing, and page breaking; retain the score/MIDI timeline adapters and tests.
+2. Add compressed `.mxl` input and score persistence, with file-size and parser security tests.
+3. Enable section-loop learning, strict chord recognition and physical-keyboard capture (when the browser supports it).
+4. Validate on a real iPhone Safari and an actual GitHub Pages origin. These remain explicit unverified acceptance gates.

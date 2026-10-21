@@ -1,10 +1,10 @@
 {
-  "version": "0.12.0",
-  "kind": "typed-core-ESM-modules",
-  "module_count": 19,
+  "version": "0.13.0",
+  "kind": "musicxml-ESM-notated-score",
+  "module_count": 21,
   "sha256": {
-    "index.html": "80aeca8c79cfa71c192fb6c43b74bb168d556b6c837af9152ac7fbf49bf7565c",
-    "standalone.html": "3061c37b89ea5fc0f27e7a1969ddef6737c0c8fab15a6d3417448aacd1696be6",
+    "index.html": "459ebff4a908980c9184f29b18c401b0eabd4cfd1641a593ab2da97544748894",
+    "standalone.html": "883099d155efb812f9e47c6925a29d84779406e5b1576781476780e20d12699f",
     "assets/app.js": "ba751fda46467cc2d92c03a146de87b67e98912d27ad51fb530eba5345e805bc",
     "assets/styles.css": "4c5439659bce84e88a5bb10ec01edd90f37ab9a535e49fb0f551979e233eef37"
   },

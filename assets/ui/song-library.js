@@ -1,11 +1,13 @@
 import {SongCatalog} from '../core/catalog.js';
 import {Midi} from '../core/midi.js';
+import {MusicXML} from '../core/musicxml.js';
 import {SongStorage} from '../storage/song-store.js';
 
 // Personal library owns persistence, import controls, and offline private export.
 export function createSongLibrary({$,callbacks}) {
   const {RPG_SONGS,demoSong}=SongCatalog;
   const {parseMidi}=Midi;
+  const {parseMusicXML}=MusicXML;
   const {savedSong,saveSong,removeSong}=SongStorage;
   let librarySelectionSerial=0;
   // ---- Garden Notes Song Studio: local, dependency-free Standard MIDI File parser ----
@@ -100,7 +102,7 @@ export function createSongLibrary({$,callbacks}) {
       clone.querySelector('head').append(data);
       const out='<!DOCTYPE html>\n'+clone.outerHTML;
       const blob=new Blob([out],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.12_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
+      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.13_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
       setTimeout(()=>URL.revokeObjectURL(url),15000);
       $('songLibraryStatus').textContent='✓ Exported private HTML with '+Object.keys(merged).length+' embedded MIDI song(s). Keep it private; the iPhone Files preview may not run interactive HTML.';
     }catch(e){$('songLibraryStatus').textContent='Could not create private song copy: '+(e.message||'export failed');}
@@ -138,10 +140,11 @@ export function createSongLibrary({$,callbacks}) {
   });
   $('songFile').addEventListener('change',async e=>{
     const f=e.target.files?.[0];if(!f)return;
-    if(f.size>5*1024*1024){$('songFeedback').textContent='This MIDI file is too large (5 MB maximum).';return;}
-    try{const loaded=parseMidi(await f.arrayBuffer(),f.name);++librarySelectionSerial;$('songLibrary').value='';showLibraryControls('');callbacks.setSong(loaded);$('songDemo').value='';
-      $('songFeedback').textContent='Imported '+f.name+' · '+callbacks.getNoteCount()+' notes in '+loaded.tracks.length+' track(s).';}
-    catch(err){$('songFeedback').textContent=err.message||'Could not read this MIDI file.';}
+    const isXML=/\.(musicxml|xml)$/i.test(f.name);
+    if(f.size>(isXML?3:5)*1024*1024){$('songFeedback').textContent='This file is too large.';return;}
+    try{const loaded=isXML?parseMusicXML(await f.text(),f.name):parseMidi(await f.arrayBuffer(),f.name);++librarySelectionSerial;$('songLibrary').value='';showLibraryControls('');callbacks.setSong(loaded);$('songDemo').value='';
+      $('songFeedback').textContent='Imported '+f.name+' · '+callbacks.getNoteCount()+' notes in '+loaded.tracks.length+' part(s).' + (isXML?' Notated measures and rests preserved.':' Pitch/timing guide only.');}
+    catch(err){$('songFeedback').textContent=err.message||'Could not read this score file.';}
     e.target.value='';
   });
   $('songDemo').addEventListener('change',e=>{if(e.target.value){++librarySelectionSerial;$('songLibrary').value='';showLibraryControls('');callbacks.setSong(demoSong(e.target.value));}});

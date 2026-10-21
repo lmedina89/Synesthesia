@@ -310,7 +310,7 @@
     </div>
     <div class="song-loaders">
       <label>Start with a demo<select id="songDemo"><option value="twinkle">Twinkle Twinkle Little Star</option><option value="scale">C major scale</option><option value="chords">Chords & melody</option></select></label>
-      <label class="song-file" for="songFile">↥ Import a MIDI song (.mid / .midi)<input id="songFile" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" aria-label="Import a MIDI file" /></label>
+      <label class="song-file" for="songFile">↥ Import MIDI or MusicXML (.mid / .musicxml)<input id="songFile" type="file" accept=".mid,.midi,.musicxml,.xml,audio/midi,audio/x-midi,application/vnd.recordare.musicxml+xml,text/xml" aria-label="Import a MIDI or MusicXML score" /></label>
     </div>
     <div class="song-options">
       <label>Learning style<select id="songMode"><option value="watch">Watch & listen</option><option value="step">Wait for my notes</option></select></label>
@@ -329,16 +329,16 @@
     </div>
     <div class="live-readout" aria-live="polite"><div id="liveNoteName" class="live-name">C4</div><div id="liveNoteDetail" class="live-notes">Press a piano key to see its name and the note on the staff.<br/>Middle C = C4 · Sharps (♯) are black keys.</div></div>
     <div id="songStaffPanel" class="score-frame" aria-label="Scrolling treble and bass staff for the song">
-      <div class="score-topline"><strong>🎼 Scrolling sheet-music guide</strong><span class="score-help">Right hand • Treble&nbsp;&nbsp; | &nbsp;&nbsp;Left hand • Bass</span></div>
+      <div class="score-topline"><strong>🎼 Scrolling score & pitch guide</strong><span class="score-help">Right hand • Treble&nbsp;&nbsp; | &nbsp;&nbsp;Left hand • Bass</span></div>
       <canvas id="songStaffCanvas" class="score-canvas" aria-label="Treble and bass musical staff showing the current notes and upcoming song notes" role="img"></canvas>
-      <div class="score-footer">Notes scroll toward the gold playhead. Shows true staff pitch positions and MIDI event timing. Staff selection and rhythmic values may be inferred; this is not an engraved score.</div>
+      <div class="score-footer">MusicXML preserves written measures, rests, note values and clefs; MIDI uses a pitch-and-timing guide. Detailed engraving (beaming, articulation and layout) is still in development.</div>
     </div>
     <div class="song-scroll" id="songScroll" tabindex="0" aria-label="Scroll horizontally to see all 88 piano keys"><div class="song-scroll-scale" id="songScrollScale"><div class="song-scroll-inner" id="songScrollInner"><canvas id="songRoll" width="1508" height="176" aria-label="Upcoming notes falling toward the piano keys"></canvas><div id="songKeys" aria-label="Full 88-key playable song keyboard"></div></div></div></div>
     <div class="song-legend"><span>🟡 <b>Gold</b> = playing</span><span>🟢 <b>Green</b> = your next notes</span><span>🟣 <b>Purple</b> = notes you finished</span></div>
     <div class="song-feedback" id="songFeedback" aria-live="polite">Ready. Press Play to see keys light up.</div>
-    <p class="song-help">Supports standard MIDI files with note data, including most piano MIDI downloads. MIDI is not an MP3 or YouTube link: audio recordings don't contain reliable individual key information. Songs with many instruments may be easier to learn by selecting a single track. The kalimba above still works; notes in its range can light up during playback too.</p>
+    <p class="song-help">Supports uncompressed partwise MusicXML (.musicxml, .xml) and standard MIDI with note data, including most piano MIDI downloads. MIDI is not an MP3 or YouTube link: audio recordings don't contain reliable individual key information. Songs with many instruments may be easier to learn by selecting a single track. The kalimba above still works; notes in its range can light up during playback too.</p>
   </section>
-  <p class="footer">v0.12 · Typed state foundations and isolated song-studio architecture · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
+  <p class="footer">v0.13 · MusicXML score import and synchronized notation · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
 </main>
 <div class="audio-recovery" id="audioRecovery" role="status" aria-live="polite" hidden><span id="audioRecoveryMessage">iPhone paused the piano audio. Tap to restore it.</span><button id="audioRestore" type="button">♫ Restore sound</button></div>
   <script>
@@ -530,6 +530,174 @@ const Midi = (() => {
     return {name:fileName.replace(/\.(mid|midi)$/i,''),notes:finished,tracks:tracks.filter(t=>t.notes),duration:end,source:'MIDI'};
   }
   return Object.freeze({parseMidi,songTempoToSeconds});
+})();
+
+
+/* core/musicxml.js */
+// MusicXML (uncompressed score-partwise) -> one normalized song timeline.
+// Browser DOMParser is injected for deterministic testing. All durations are in quarter notes
+// before conversion through a tempo map; note spelling/clefs/rests are preserved for notation.
+const MusicXML = (() => {
+  const direct=(node,tag)=>Array.from(node?.children||[]).find(c=>c.localName===tag)||null;
+  const many=(node,tag)=>Array.from(node?.children||[]).filter(c=>c.localName===tag);
+  const value=(node,tag,fallback='')=>direct(node,tag)?.textContent?.trim()??fallback;
+  const num=(node,tag,fallback)=>{const n=Number(value(node,tag,''));return Number.isFinite(n)&&value(node,tag,'')!==''?n:fallback;};
+  const fail=(message)=>{throw new Error('MusicXML import: '+message);};
+  const PITCH={'C':0,'D':2,'E':4,'F':5,'G':7,'A':9,'B':11};
+  function parseMusicXML(xml,filename='Imported score.musicxml',Parser=globalThis.DOMParser) {
+    if(typeof xml!=='string'||xml.length>3_000_000)fail('file is empty or exceeds 3 MB');
+    if(/<!ENTITY/i.test(xml))fail('custom XML entities are not supported');
+    // MusicXML exports commonly declare a standard external DTD. Strip the
+    // declaration without fetching it; reject internal subsets/other doctypes.
+    const safeXML=xml.replace(/<!DOCTYPE\s+score-partwise(?:\s+PUBLIC\s+"[^"]*"\s+"[^"]*"|\s+SYSTEM\s+"[^"]*")?\s*>/i,'');
+    if(/<!DOCTYPE/i.test(safeXML))fail('unsupported DTD declaration');
+    if(typeof Parser!=='function')fail('XML parser not available');
+    const doc=new Parser().parseFromString(safeXML,'application/xml');
+    if(doc.getElementsByTagName('parsererror').length)fail('invalid XML document');
+    const root=doc.documentElement;
+    if(root?.localName!=='score-partwise')fail('only uncompressed partwise MusicXML is supported');
+    const parts=many(root,'part');if(!parts.length||parts.length>24)fail('unsupported number of parts');
+    const partNames=new Map();
+    for(const p of Array.from(direct(root,'part-list')?.children||[]).filter(x=>x.localName==='score-part')){
+      partNames.set(p.getAttribute('id'),value(p,'part-name','Piano'));
+    }
+    const trackIds=new Map(),tracks=[],rawNotes=[],rawRests=[],rawMeasures=[],tempos=[{beat:0,bpm:120,priority:0}];
+    let measureLimit=0;
+    function trackFor(partId,staff,partName){const key=partId+':'+staff;
+      if(!trackIds.has(key)){
+        const id=tracks.length;trackIds.set(key,id);
+        tracks.push({id,name:partName+(staff>1?' · staff '+staff:''),notes:0,channel:''});
+      }
+      return trackIds.get(key);
+    }
+    for(let pi=0;pi<parts.length;pi++){
+      const part=parts[pi],partId=part.getAttribute('id')||('P'+pi),partName=partNames.get(partId)||'Part '+(pi+1);
+      let divisions=1,beats=4,beatType=4,keyFifths=0,clefs=new Map([[1,'treble'],[2,'bass']]);
+      let partBeat=0; const measures=many(part,'measure');
+      if(measures.length>1000)fail('too many measures');
+      for(let mi=0;mi<measures.length;mi++){
+        if(++measureLimit>5000)fail('too many measures across parts');
+        const m=measures[mi],startBeat=partBeat,attrs=direct(m,'attributes');
+        if(attrs){
+          divisions=num(attrs,'divisions',divisions);
+          if(!Number.isInteger(divisions)||divisions<1||divisions>100000)fail('invalid divisions');
+          const t=direct(attrs,'time');if(t){beats=num(t,'beats',beats);beatType=num(t,'beat-type',beatType);}
+          if(beats<1||beats>32||![1,2,4,8,16,32].includes(beatType))fail('unsupported time signature');
+          const k=direct(attrs,'key');if(k)keyFifths=num(k,'fifths',keyFifths);
+          if(Math.abs(keyFifths)>7)fail('unsupported key signature');
+          for(const c of many(attrs,'clef')){
+            const s=Number(c.getAttribute('number')||1),sign=value(c,'sign','G');
+            clefs.set(s,sign==='F'?'bass':sign==='G'?'treble':sign==='C'?'alto':'treble');
+          }
+        }
+        let cursor=0,maxCursor=0,lastNoteStart=0;
+        const events=Array.from(m.children);
+        for(const e of events){
+          if(e.localName==='direction'){
+            const sound=direct(e,'sound'),bpm=Number(sound?.getAttribute('tempo'));
+            let tempo=bpm;
+            if(!Number.isFinite(tempo)||tempo<=0){
+              const mt=e.getElementsByTagName('metronome')[0];tempo=Number(value(mt,'per-minute',''));
+            }
+            if(Number.isFinite(tempo)&&tempo>=20&&tempo<=400){tempos.push({beat:startBeat+cursor,bpm:tempo,priority:pi===0?2:1});}
+          }
+          if(e.localName==='backup'||e.localName==='forward'){
+            const d=num(e,'duration',0)/divisions;
+            if(d<0||d>100)fail('invalid timeline movement');
+            cursor+=(e.localName==='backup'?-d:d);
+            if(cursor < -0.00001)fail('backups move before measure start');
+            maxCursor=Math.max(maxCursor,cursor);continue;
+          }
+          if(e.localName!=='note')continue;
+          const chord=!!direct(e,'chord'),grace=!!direct(e,'grace');
+          const duration=num(e,'duration',0)/divisions;
+          if(duration<0||duration>100)fail('invalid note duration');
+          const onset=chord?lastNoteStart:cursor;
+          if(!chord)lastNoteStart=cursor;
+          const staff=num(e,'staff',1),track=trackFor(partId,staff,partName);
+          const clef=clefs.get(staff)||(staff===2?'bass':'treble');
+          const voice=value(e,'voice','1');
+          if(!grace&&duration>0){
+            if(direct(e,'rest')){
+              rawRests.push({startBeat:startBeat+onset,endBeat:startBeat+onset+duration,staff:clef,track,voice,part:pi,measure:mi,durationBeats:duration});
+            } else {
+              const pitch=direct(e,'pitch'),step=value(pitch,'step',''),octave=num(pitch,'octave',NaN),alter=num(pitch,'alter',0);
+              if(Object.hasOwn(PITCH,step)&&Number.isInteger(octave)&&octave>=0&&octave<=9&&Number.isInteger(alter)&&Math.abs(alter)<=2){
+                const midi=(octave+1)*12+PITCH[step]+alter;
+                if(midi>=21&&midi<=108){
+                  const ties=many(e,'tie').map(t=>t.getAttribute('type'));
+                  rawNotes.push({midi,startBeat:startBeat+onset,endBeat:startBeat+onset+duration,track,velocity:80,
+                    clef,voice,part:pi,measure:mi,step,octave,alter,explicitAccidental:value(e,'accidental',''),
+                    tieStart:ties.includes('start'),tieStop:ties.includes('stop'),durationBeats:duration});
+                  tracks[track].notes++;
+                }
+              }
+            }
+          }
+          if(!chord){cursor+=duration;maxCursor=Math.max(maxCursor,cursor);}
+        }
+        // Respect regular measure durations and implicit pickup measures.
+        const expected=beats*4/beatType;
+        const width=m.getAttribute('implicit')==='yes'?maxCursor:Math.max(maxCursor,expected);
+        if(!(width>=0&&width<100))fail('unsupported measure duration');
+        if(pi===0)rawMeasures.push({index:mi,number:m.getAttribute('number')||String(mi+1),startBeat,endBeat:startBeat+width,beats,beatType,keyFifths});
+        partBeat+=width;
+      }
+    }
+    if(!rawNotes.length)fail('no playable pitched notes found');
+    if(rawNotes.length>25000)fail('too many notes');
+    // Deterministic tempo conflicts: first part takes precedence; at same beat last wins.
+    tempos.sort((a,b)=>a.beat-b.beat||a.priority-b.priority);
+    const schedule=[];
+    for(const t of tempos){if(schedule.length&&Math.abs(schedule.at(-1).beat-t.beat)<1e-7)schedule[schedule.length-1]={...t};else schedule.push({...t});}
+    let elapsed=0;
+    for(let i=0;i<schedule.length;i++){const t=schedule[i];
+      if(i)elapsed+=(t.beat-schedule[i-1].beat)*60/schedule[i-1].bpm;
+      t.sec=elapsed;
+    }
+    function toSec(beat){let lo=0,hi=schedule.length;
+      while(lo<hi){const mid=(lo+hi)>>1;if(schedule[mid].beat<=beat)lo=mid+1;else hi=mid;}
+      const t=schedule[Math.max(0,lo-1)];return t.sec+(beat-t.beat)*60/t.bpm;
+    }
+    rawNotes.sort((a,b)=>a.startBeat-b.startBeat||a.midi-b.midi);
+    // Keep every written note event for notation. Join sustained tied notes only for audio playback.
+    const chain=new Map(),played=[];
+    for(const n of rawNotes){
+      const key=n.track+':'+n.voice+':'+n.midi;
+      const prior=chain.get(key);
+      if(n.tieStop&&prior&&Math.abs(prior.endBeat-n.startBeat)<.0001){prior.endBeat=n.endBeat;
+        if(!n.tieStart)chain.delete(key);
+      }else{
+        const entry={midi:n.midi,startBeat:n.startBeat,endBeat:n.endBeat,track:n.track,velocity:80};played.push(entry);
+        if(n.tieStart)chain.set(key,entry);
+      }
+    }
+    const notes=played.map(n=>({midi:n.midi,start:toSec(n.startBeat),end:toSec(n.endBeat),track:n.track,velocity:n.velocity}));
+    // Derive printed accidentals per bar and staff, respecting the key signature.
+    // This preserves explicit accidentals and avoids repeating alterations.
+    const keys=['F','C','G','D','A','E','B'],flats=['B','E','A','D','G','C','F'];
+    const localAccidentals=new Map();
+    for(const n of rawNotes){
+      const fifths=rawMeasures[n.measure]?.keyFifths||0;
+      const inKey=(fifths>0?keys:flats).slice(0,Math.abs(fifths)).includes(n.step)?Math.sign(fifths):0;
+      const id=n.part+':'+n.measure+':'+n.clef;
+      if(!localAccidentals.has(id))localAccidentals.set(id,new Map());
+      const state=localAccidentals.get(id),key=n.step+n.octave;
+      const current=state.has(key)?state.get(key):inKey;
+      n.notatedAccidental=n.explicitAccidental|| (n.alter!==current?(n.alter===0?'natural':n.alter===1?'sharp':n.alter===-1?'flat':''):'');
+      state.set(key,n.alter);
+    }
+    rawRests.sort((a,b)=>a.startBeat-b.startBeat);
+    const score={type:'MusicXML',measures:rawMeasures.map(m=>({...m,start:toSec(m.startBeat),end:toSec(m.endBeat)})),
+      notes:rawNotes.map(n=>({...n,start:toSec(n.startBeat),end:toSec(n.endBeat)})),
+      rests:rawRests.map(r=>({...r,start:toSec(r.startBeat),end:toSec(r.endBeat)})),
+      tempo:schedule.map(t=>({...t}))};
+    const duration=Math.max(...notes.map(n=>n.end),...score.measures.map(m=>m.end),0);
+    if(duration>14400)fail('song exceeds four hours');
+    const title=value(direct(root,'work'),'work-title','')||value(root,'movement-title','')||filename.replace(/\.(musicxml|xml)$/i,'');
+    return {name:title,source:'MusicXML',notes,tracks:tracks.filter(t=>t.notes),duration,score};
+  }
+  return Object.freeze({parseMusicXML});
 })();
 
 
@@ -956,6 +1124,147 @@ const StaffRenderer = (() => {
 })();
 
 
+/* visual/score-renderer.js */
+
+// Score-aware canvas layout for imported MusicXML; time-based horizontal scroll
+// is deliberately shared with the falling-note/audio clock. This is NOT a full
+// professional engraving system (tuplets, slurs, articulations, voice collision).
+const ScoreRenderer = (() => {
+  const top=[56,69,82,95,108],bass=[167,180,193,206,219];
+  const LINE=Notation.STAFF_LINE_SPACING;
+  const cachedTrackSets=new WeakMap();
+  const tracksFor=notes=>{
+    if(!cachedTrackSets.has(notes))cachedTrackSets.set(notes,new Set(notes.map(n=>n.track)));
+    return cachedTrackSets.get(notes);
+  };
+  function firstStartAtOrAfter(events,t){
+    let lo=0,hi=events.length;
+    while(lo<hi){const mid=(lo+hi)>>1;if(events[mid].start<t)lo=mid+1;else hi=mid;}
+    return lo;
+  }
+  const SHARP_STEPS=['F','C','G','D','A','E','B'],FLAT_STEPS=['B','E','A','D','G','C','F'];
+  function notePos(n) {
+    const bottom=n.clef==='bass'?219:108;
+    const base=n.clef==='bass'?{letter:'G',octave:2}:{letter:'E',octave:4};
+    const i='CDEFGAB'.indexOf(n.step),j='CDEFGAB'.indexOf(base.letter);
+    const steps=(n.octave*7+i)-(base.octave*7+j);
+    return {y:bottom-steps*LINE/2,steps,bottom};
+  }
+  function accidental(n) {
+    const map={sharp:'♯',flat:'♭',natural:'♮','double-sharp':'𝄪','flat-flat':'𝄫'};
+    return map[n.notatedAccidental]||'';
+  }
+  function drawKeySignature(ctx,fifths){
+    if(!fifths)return;
+    const orders=fifths>0?SHARP_STEPS:FLAT_STEPS;
+    const trebleOct=fifths>0?[5,5,5,5,4,5,4]:[4,5,4,5,4,5,4];
+    const bassOct=fifths>0?[3,3,3,3,2,3,2]:[2,3,2,3,2,3,2];
+    for(let i=0;i<Math.abs(fifths);i++){
+      const name=orders[i],x=48+i*8;
+      for(const [clef,octave] of [['treble',trebleOct[i]],['bass',bassOct[i]]]){
+        const pitch={clef,step:name,octave};const y=notePos(pitch).y;
+        ctx.fillStyle='#574864';ctx.font='bold 18px serif';ctx.fillText(fifths>0?'♯':'♭',x,y+5);
+      }
+    }
+  }
+  function drawStaff(ctx,w) {
+    for(const lines of [top,bass]){ctx.strokeStyle='#9b8a9f';ctx.lineWidth=1;
+      for(const y of lines){ctx.beginPath();ctx.moveTo(8,y);ctx.lineTo(w-6,y);ctx.stroke();}
+    }
+    ctx.font='60px "Apple Symbols","Noto Music",serif';ctx.fillStyle='#4a3b59';ctx.fillText('𝄞',9,106);
+    ctx.font='49px "Apple Symbols","Noto Music",serif';ctx.fillText('𝄢',15,216);
+  }
+  function drawRest(ctx,x,y,duration,color) {
+    ctx.save();ctx.fillStyle=color;ctx.strokeStyle=color;ctx.lineWidth=2.2;
+    if(duration>=4){ctx.fillRect(x-8,y-8,15,5);} // whole rest hangs from line
+    else if(duration>=2){ctx.fillRect(x-8,y-2,15,5);} // half rest rests on line
+    else if(duration>=1){
+      ctx.beginPath();ctx.moveTo(x-4,y-22);ctx.lineTo(x+4,y-13);ctx.lineTo(x-3,y-5);ctx.lineTo(x+4,y+3);
+      ctx.lineTo(x-4,y+13);ctx.lineTo(x+3,y+19);ctx.stroke();
+    } else {
+      ctx.beginPath();ctx.arc(x+3,y-2,3,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.moveTo(x+5,y-3);ctx.lineTo(x-3,y+17);ctx.stroke();
+      if(duration<.5){ctx.beginPath();ctx.arc(x+3,y+6,2.5,0,Math.PI*2);ctx.fill();}
+    }
+    ctx.restore();
+  }
+  function drawNote(ctx,x,n,color,headOffset=0) {
+    const pos=notePos(n),{y,steps,bottom}=pos;
+    if(y<23||y>246){ctx.font='bold 11px system-ui';ctx.fillStyle=color;
+      ctx.fillText((y<23?'↑ ':'↓ ')+n.step+n.octave,x,y<23?25:245);return;
+    }
+    const ledger=Notation.ledgerLines(pos,bottom,LINE);
+    ctx.strokeStyle='#7c6984';ctx.lineWidth=1.2;
+    for(const ly of ledger){if(ly<19||ly>252)continue;ctx.beginPath();ctx.moveTo(x-13,ly);ctx.lineTo(x+14,ly);ctx.stroke();}
+    const xx=x+headOffset,whole=n.durationBeats>=4,half=n.durationBeats>=2;
+    ctx.save();ctx.translate(xx,y);ctx.rotate(-.28);
+    ctx.beginPath();ctx.ellipse(0,0,8.4,5.5,0,0,Math.PI*2);
+    ctx.fillStyle=half||whole?'#faf6ed':color;ctx.strokeStyle=color;ctx.lineWidth=1.8;
+    ctx.fill();ctx.stroke();ctx.restore();
+    if(!whole){const up=steps<4,stemX=xx+(up?7:-7),stemEnd=y+(up?-30:30);
+      ctx.strokeStyle=color;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(stemX,y);ctx.lineTo(stemX,stemEnd);ctx.stroke();
+      if(n.durationBeats<1){ // draw eighth/sixteenth hooks; beam grouping remains future engraving work
+        ctx.beginPath();ctx.moveTo(stemX,stemEnd);ctx.bezierCurveTo(stemX+(up?13:-13),stemEnd+6,stemX+(up?11:-11),stemEnd+15,stemX+(up?8:-8),stemEnd+18);ctx.stroke();
+        if(n.durationBeats<.5){ctx.beginPath();ctx.moveTo(stemX,stemEnd+ (up?5:-5));ctx.quadraticCurveTo(stemX+(up?12:-12),stemEnd+9,stemX+(up?8:-8),stemEnd+15);ctx.stroke();}
+      }
+    }
+  }
+  function render({at,score,canvas,notes,stepActive,labels}) {
+    const width=Math.max(250,canvas.clientWidth||330),height=canvas.clientHeight||255,dpr=Math.min(2,window.devicePixelRatio||1);
+    const w=Math.round(width*dpr),h=Math.round(height*dpr);
+    if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
+    const ctx=canvas.getContext('2d');if(!ctx)return;
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);ctx.fillStyle='#fbf7ed';ctx.fillRect(0,0,width,height);
+    ctx.save();ctx.scale(1,height/255);drawStaff(ctx,width);
+    const x0=Math.min(125,Math.max(98,width*.29)),speed=width<480?66:86;
+    const atMeasure=score.measures.find(m=>m.start<=at&&m.end>at)||score.measures.at(-1);
+    if(atMeasure){
+      drawKeySignature(ctx,atMeasure.keyFifths||0);
+      ctx.fillStyle='#40334b';ctx.font='bold 14px serif';
+      ctx.fillText(String(atMeasure.beats),75,75);ctx.fillText(String(atMeasure.beatType),75,92);
+      ctx.fillText(String(atMeasure.beats),75,185);ctx.fillText(String(atMeasure.beatType),75,202);
+    }
+    ctx.fillStyle='#f0daac';ctx.fillRect(x0-2,20,4,225);
+    ctx.fillStyle='#745b30';ctx.font='bold 10px system-ui';ctx.fillText('NOW',x0-13,16);
+    const visibleStart=at-(x0+25)/speed,visibleEnd=at+(width-x0+25)/speed;
+    const firstMeasure=Math.max(0,firstStartAtOrAfter(score.measures,visibleStart)-1);
+    for(let i=firstMeasure;i<score.measures.length;i++){const m=score.measures[i];if(m.start>visibleEnd)break;if(m.end<visibleStart)continue;
+      const x=x0+(m.start-at)*speed-17;
+      if(x>=30&&x<width){ctx.strokeStyle='#988c8c';ctx.lineWidth=1.2;
+        for(const [t,b] of [[top[0],top[4]],[bass[0],bass[4]]]){ctx.beginPath();ctx.moveTo(x,t);ctx.lineTo(x,b);ctx.stroke();}
+        ctx.fillStyle='#6d6177';ctx.font='bold 10px system-ui';ctx.fillText(String(m.number),x+3,33);
+        // Meter and key changes are shown in the fixed left score gutter,
+        // preventing collisions with noteheads at the measure boundary.
+      }
+    }
+    const selectedTracks=tracksFor(notes);
+    // Preserve written rests in both hands. Multiple voices can overlap intentionally.
+    for(let i=firstStartAtOrAfter(score.rests,visibleStart);i<score.rests.length;i++){const r=score.rests[i];if(r.start>visibleEnd)break;if(r.end<visibleStart)continue;
+      if(r.track!==undefined&&!selectedTracks.has(r.track))continue;
+      const x=x0+(r.start-at)*speed;if(x<32||x>width-4)continue;
+      drawRest(ctx,x,r.staff==='bass'?195:83,r.durationBeats,'#8a709a');
+    }
+    const occupied=[];
+    for(let i=firstStartAtOrAfter(score.notes,visibleStart);i<score.notes.length;i++){const n=score.notes[i];if(n.start>visibleEnd)break;if(n.end<visibleStart)continue;
+      if(!selectedTracks.has(n.track))continue;
+      const x=x0+(n.start-at)*speed;if(x<21||x>width+20)continue;
+      const active=(n.start<=at&&n.end>at)||stepActive.has(n.midi);
+      const color=active?'#16876b':n.clef==='bass'?'#7355a8':'#347fa1';
+      const p=notePos(n),adj=occupied.find(v=>v.clef===n.clef&&Math.abs(v.start-n.start)<.001&&Math.abs(v.steps-p.steps)===1);
+      occupied.push({clef:n.clef,start:n.start,steps:p.steps});
+      const glyph=accidental(n);
+      if(glyph){ctx.font='bold 18px serif';ctx.fillStyle=color;ctx.fillText(glyph,x-23,p.y+6);}
+      drawNote(ctx,x,n,color,adj?10:0);
+      if(labels!=='off'&&active&&p.y>=25&&p.y<=245){ctx.fillStyle='#174d43';ctx.font='bold 10px system-ui';
+        ctx.fillText(n.step+(n.alter===1?'♯':n.alter===-1?'♭':'')+n.octave,x-10,p.y-14);}
+    }
+    if(!score.notes.length){ctx.font='12px system-ui';ctx.fillText('No notated notes.',x0+15,136);}
+    ctx.restore();
+  }
+  return Object.freeze({render});
+})();
+
+
 /* visual/roll-renderer.js */
 // Frame-independent falling-note painter; renderer has no DOM queries.
 function paintSongRoll({at, canvas, notes, maxDuration, pianoX, midiSharp, lowerBoundSong, SONG_FIRST, SONG_LAST, SONG_W}){
@@ -1193,10 +1502,12 @@ function createFocusMode({$,songUi,callbacks}) {
 
 
 
+
 // Personal library owns persistence, import controls, and offline private export.
 function createSongLibrary({$,callbacks}) {
   const {RPG_SONGS,demoSong}=SongCatalog;
   const {parseMidi}=Midi;
+  const {parseMusicXML}=MusicXML;
   const {savedSong,saveSong,removeSong}=SongStorage;
   let librarySelectionSerial=0;
   // ---- Garden Notes Song Studio: local, dependency-free Standard MIDI File parser ----
@@ -1291,7 +1602,7 @@ function createSongLibrary({$,callbacks}) {
       clone.querySelector('head').append(data);
       const out='<!DOCTYPE html>\n'+clone.outerHTML;
       const blob=new Blob([out],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.12_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
+      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.13_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
       setTimeout(()=>URL.revokeObjectURL(url),15000);
       $('songLibraryStatus').textContent='✓ Exported private HTML with '+Object.keys(merged).length+' embedded MIDI song(s). Keep it private; the iPhone Files preview may not run interactive HTML.';
     }catch(e){$('songLibraryStatus').textContent='Could not create private song copy: '+(e.message||'export failed');}
@@ -1329,10 +1640,11 @@ function createSongLibrary({$,callbacks}) {
   });
   $('songFile').addEventListener('change',async e=>{
     const f=e.target.files?.[0];if(!f)return;
-    if(f.size>5*1024*1024){$('songFeedback').textContent='This MIDI file is too large (5 MB maximum).';return;}
-    try{const loaded=parseMidi(await f.arrayBuffer(),f.name);++librarySelectionSerial;$('songLibrary').value='';showLibraryControls('');callbacks.setSong(loaded);$('songDemo').value='';
-      $('songFeedback').textContent='Imported '+f.name+' · '+callbacks.getNoteCount()+' notes in '+loaded.tracks.length+' track(s).';}
-    catch(err){$('songFeedback').textContent=err.message||'Could not read this MIDI file.';}
+    const isXML=/\.(musicxml|xml)$/i.test(f.name);
+    if(f.size>(isXML?3:5)*1024*1024){$('songFeedback').textContent='This file is too large.';return;}
+    try{const loaded=isXML?parseMusicXML(await f.text(),f.name):parseMidi(await f.arrayBuffer(),f.name);++librarySelectionSerial;$('songLibrary').value='';showLibraryControls('');callbacks.setSong(loaded);$('songDemo').value='';
+      $('songFeedback').textContent='Imported '+f.name+' · '+callbacks.getNoteCount()+' notes in '+loaded.tracks.length+' part(s).' + (isXML?' Notated measures and rests preserved.':' Pitch/timing guide only.');}
+    catch(err){$('songFeedback').textContent=err.message||'Could not read this score file.';}
     e.target.value='';
   });
   $('songDemo').addEventListener('change',e=>{if(e.target.value){++librarySelectionSerial;$('songLibrary').value='';showLibraryControls('');callbacks.setSong(demoSong(e.target.value));}});
@@ -1342,6 +1654,7 @@ function createSongLibrary({$,callbacks}) {
 
 
 /* ui/song-notation.js */
+
 // Song notation view: note labels, live note readout and scrolling staff.
 // Musical positioning remains in core/notation and visual/staff-renderer.
 function createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,getContext}) {
@@ -1374,7 +1687,11 @@ function createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,getContext
     const {song,selectedSongNotes,songPlaying,songGroups,songGroupIndex}=getContext();
     const stepActive = $('songMode').value==='step'&&songPlaying
       ? new Set(songGroups[songGroupIndex]?.midis||[]) : new Set();
-    StaffRenderer.renderSongStaff({at,scoreCanvas,scoreContainer,song,selectedSongNotes,lastTouchedNotes,scoreLabels,stepActive,songStaffHand});
+    if(song?.score?.type==='MusicXML'){
+      ScoreRenderer.render({at,score:song.score,canvas:scoreCanvas,notes:selectedSongNotes,stepActive,labels:scoreLabels});
+    }else{
+      StaffRenderer.renderSongStaff({at,scoreCanvas,scoreContainer,song,selectedSongNotes,lastTouchedNotes,scoreLabels,stepActive,songStaffHand});
+    }
   }
   window.addEventListener('resize',()=>renderSongStaff(getContext().songPosition),{passive:true});
   return Object.freeze({updateSongKeyLabels,readPlayedNotes,renderSongStaff});

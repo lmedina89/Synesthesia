@@ -1,37 +1,37 @@
-# Garden Notes v0.12 — Song session extraction & typed state foundations
+# Garden Notes v0.13 — MusicXML Score Foundations
 
-This release continues directly from v0.11, preserving the *external-module* GitHub Pages app, the same UI, song library and storage key, and the standalone **personal** MIDI export.
+This release is built from the unchanged v0.12 developer baseline. It is an **incremental, tested music-notation update**, not a rewrite or a completed commercial engraving system.
 
-## Install
+## Install / use
 
-1. Back up your personal MIDI files. The existing IndexedDB data should persist on the **same site URL and browser**, but changing origins or clearing site data can remove it.
-2. Extract `Garden_Notes_v0.12_GitHub_Ready.zip`. Publish **all contents**, including the `assets/` directory, with `index.html` at the repository's GitHub Pages publishing root.
-3. Open the live HTTPS page. The first grand-piano sample load requires internet. You may need to tap to unlock iOS audio.
-4. Do **not** publish a personal `PRIVATE_Songs.html` file to GitHub Pages; it may contain third-party MIDI arrangements.
+1. Download `Garden_Notes_v0.13_GitHub_Ready.zip`; extract and publish **all contents** at the root of your existing GitHub Pages deployment. Retain the `assets/` directory and `index.html`.
+2. Try an uncompressed **MusicXML `.musicxml` / `.xml`** score using **Import MIDI or MusicXML**. One small, original `score-demo.musicxml` test score is included in the ZIP; download it from the files you extracted and import it for a working example.
+3. MusicXML imports display written measure boundaries, rests, note durations, clefs, key/time signatures and pitches in a score-aware scrolling view. The same events drive the audio, falling notes, keyboard highlights and note-by-note practice. MIDI files still use the existing *pitch-and-timing* guide: MIDI does not encode a faithful printed score.
+4. To continue using the personal RPG library, re-use your previously saved MIDI arrangements. The shared release does **not** include third-party RPG MIDI content. Personal MIDI exports remain private standalone HTML files; don't publish those exports.
 
-## What actually changed
+## Exactly what changed
 
-- `src/app.js` is now a ~3.5 KB composition root, versus ~18 KB in v0.11. It wires shared Web Audio, typed persistent preferences, the beginner trainer and Song Studio.
-- `src/ui/song-studio.js` independently owns transport, song selection, session progress, keyboard, song/practice mode and events. `src/ui/song-notation.js` owns the live key labels and sheet-music UI. This is a meaningful controller extraction; Song Studio is still a ~13 KB module, not a totally finished architecture.
-- `src/app/preferences.ts` adds strongly typed persisted v1 preference normalization, a stable v1 storage key, safe fallback for private browsers and validated scores.
-- `src/core/song-state.ts` adds pure typed helpers for note-track selection, duration, playback time bounds and display time.
-- The TypeScript sources are compiled with the available `tsc` compiler to ES modules before copying to GitHub-ready assets. The other modules remain JavaScript. **This is incremental TypeScript, not a fully converted codebase.** No framework or Vite migration.
-- Shared CSS and externally loaded ES module assets stay unchanged in architecture; `index.html` contains interface markup only. Generated `standalone.html` is retained specifically for personal embedded-song exports.
+- `src/core/musicxml.js` — bounded browser MusicXML parser handling uncompressed `score-partwise` documents, two or more staves, voices, chords, rest events, key/time changes, tempo changes and ties for audible note durations. It normalizes notation to the existing timed MIDI-shaped note model without losing score metadata. Standard MusicXML external DTD declarations are stripped safely, not fetched; custom entities are rejected.
+- `src/visual/score-renderer.js` — separate, scrolling canvas renderer for imported MusicXML with true staff pitch positions, ledger lines, printed measure boundaries/numbers, simple rest glyphs and notehead values, meter/key display and current-note highlighting. It culls offscreen events and caches track filters.
+- `src/ui/song-notation.js` — switches between the MusicXML score-aware renderer and the previous MIDI pitch guide automatically.
+- `src/ui/song-library.js` — recognizes `.musicxml` and `.xml` in generic song import while retaining all previous MIDI personal library features.
+- New example MusicXML file and headless desktop/mobile regression checks; existing v0.12 unit and browser tests are still part of the gate.
 
-## Developer commands
+## Important limitations (don't mistake this for finished engraving)
 
-Requires Python 3, Node.js 22+, TypeScript `tsc` 5.x, and optional Python/Chromium Playwright dependencies for browser tests.
+- This is **NOT yet VexFlow or equivalent professional engraving**. Printed beams, multi-voice collision avoidance, tuplets, slurs, articulations, layout breaks and repeat signs are not rendered fully. Basic notes, flags and rests are drawn; the score view is designed to be useful and synchronized, not to replace publisher notation.
+- Compressed `.mxl` is **not supported yet**. In MuseScore, export **uncompressed MusicXML**. Lyrics, instrument transposition, percussion, measure-repeat directives and complex scores are not fully supported.
+- The private-song HTML exporter embeds downloaded **MIDI**, not imported MusicXML; importing MusicXML currently lasts for the open browser session.
+- Actual iPhone Safari audio, touch behavior and real-origin IndexedDB persistence still require physical-device acceptance testing. Headless mobile emulation isn't an iPhone.
 
-```
+## Developer workflow
+
+Requires Python 3, Node 22+, TypeScript compiler 5.x. Browser tests also require Playwright and Chromium, plus the pre-existing Python test requirements.
+
+```bash
 python scripts/build.py
 bash scripts/validate.sh
 python scripts/package.py
 ```
 
-`npm run build` and `npm test` call the same scripts. `tsconfig.json` uses strict type checking for two new `.ts` modules; compiled `.js` files live under `.compiled/` and are generated rather than manually edited.
-
-## Release boundaries and validation
-
-The tests cover MIDI, pitch/notation, song time and track selection, corruption-safe preferences, normal playback, speed, pause, simulated iOS interruption and recovery, full-screen focus, 88-key input, kalimba, MIDI import, local private-pack generation and re-opening. Chromium browser tests load the real module bytes through test-only data URLs: this environment **blocks localhost navigation**, so these checks are **not** proof of real-origin IndexedDB persistence or iPhone Safari runtime behavior. A physical-device acceptance test is still required.
-
-The two RPG songs are not bundled as MIDI files; importing your own copies is still required. The scrolling notation is not yet an engraved MusicXML score, and the Web Audio sample backend still needs physical iPhone testing.
+The released `index.html` is a small shell loading **21 real ES modules and external CSS**. The generated `standalone.html` is a separate private-export artifact built from the same source modules. TypeScript migration remains incremental (two existing `.ts` files). No VexFlow runtime package or network dependency has been added for sheet music.

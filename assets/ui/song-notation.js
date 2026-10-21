@@ -1,3 +1,4 @@
+import {ScoreRenderer} from '../visual/score-renderer.js';
 // Song notation view: note labels, live note readout and scrolling staff.
 // Musical positioning remains in core/notation and visual/staff-renderer.
 export function createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,getContext}) {
@@ -30,7 +31,11 @@ export function createSongNotation({$,songKeys,Theory,Notation,StaffRenderer,get
     const {song,selectedSongNotes,songPlaying,songGroups,songGroupIndex}=getContext();
     const stepActive = $('songMode').value==='step'&&songPlaying
       ? new Set(songGroups[songGroupIndex]?.midis||[]) : new Set();
-    StaffRenderer.renderSongStaff({at,scoreCanvas,scoreContainer,song,selectedSongNotes,lastTouchedNotes,scoreLabels,stepActive,songStaffHand});
+    if(song?.score?.type==='MusicXML'){
+      ScoreRenderer.render({at,score:song.score,canvas:scoreCanvas,notes:selectedSongNotes,stepActive,labels:scoreLabels});
+    }else{
+      StaffRenderer.renderSongStaff({at,scoreCanvas,scoreContainer,song,selectedSongNotes,lastTouchedNotes,scoreLabels,stepActive,songStaffHand});
+    }
   }
   window.addEventListener('resize',()=>renderSongStaff(getContext().songPosition),{passive:true});
   return Object.freeze({updateSongKeyLabels,readPlayedNotes,renderSongStaff});

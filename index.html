@@ -70,7 +70,7 @@
     </div>
     <div class="song-loaders">
       <label>Start with a demo<select id="songDemo"><option value="twinkle">Twinkle Twinkle Little Star</option><option value="scale">C major scale</option><option value="chords">Chords & melody</option></select></label>
-      <label class="song-file" for="songFile">↥ Import a MIDI song (.mid / .midi)<input id="songFile" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" aria-label="Import a MIDI file" /></label>
+      <label class="song-file" for="songFile">↥ Import MIDI or MusicXML (.mid / .musicxml)<input id="songFile" type="file" accept=".mid,.midi,.musicxml,.xml,audio/midi,audio/x-midi,application/vnd.recordare.musicxml+xml,text/xml" aria-label="Import a MIDI or MusicXML score" /></label>
     </div>
     <div class="song-options">
       <label>Learning style<select id="songMode"><option value="watch">Watch & listen</option><option value="step">Wait for my notes</option></select></label>
@@ -89,16 +89,16 @@
     </div>
     <div class="live-readout" aria-live="polite"><div id="liveNoteName" class="live-name">C4</div><div id="liveNoteDetail" class="live-notes">Press a piano key to see its name and the note on the staff.<br/>Middle C = C4 · Sharps (♯) are black keys.</div></div>
     <div id="songStaffPanel" class="score-frame" aria-label="Scrolling treble and bass staff for the song">
-      <div class="score-topline"><strong>🎼 Scrolling sheet-music guide</strong><span class="score-help">Right hand • Treble&nbsp;&nbsp; | &nbsp;&nbsp;Left hand • Bass</span></div>
+      <div class="score-topline"><strong>🎼 Scrolling score & pitch guide</strong><span class="score-help">Right hand • Treble&nbsp;&nbsp; | &nbsp;&nbsp;Left hand • Bass</span></div>
       <canvas id="songStaffCanvas" class="score-canvas" aria-label="Treble and bass musical staff showing the current notes and upcoming song notes" role="img"></canvas>
-      <div class="score-footer">Notes scroll toward the gold playhead. Shows true staff pitch positions and MIDI event timing. Staff selection and rhythmic values may be inferred; this is not an engraved score.</div>
+      <div class="score-footer">MusicXML preserves written measures, rests, note values and clefs; MIDI uses a pitch-and-timing guide. Detailed engraving (beaming, articulation and layout) is still in development.</div>
     </div>
     <div class="song-scroll" id="songScroll" tabindex="0" aria-label="Scroll horizontally to see all 88 piano keys"><div class="song-scroll-scale" id="songScrollScale"><div class="song-scroll-inner" id="songScrollInner"><canvas id="songRoll" width="1508" height="176" aria-label="Upcoming notes falling toward the piano keys"></canvas><div id="songKeys" aria-label="Full 88-key playable song keyboard"></div></div></div></div>
     <div class="song-legend"><span>🟡 <b>Gold</b> = playing</span><span>🟢 <b>Green</b> = your next notes</span><span>🟣 <b>Purple</b> = notes you finished</span></div>
     <div class="song-feedback" id="songFeedback" aria-live="polite">Ready. Press Play to see keys light up.</div>
-    <p class="song-help">Supports standard MIDI files with note data, including most piano MIDI downloads. MIDI is not an MP3 or YouTube link: audio recordings don't contain reliable individual key information. Songs with many instruments may be easier to learn by selecting a single track. The kalimba above still works; notes in its range can light up during playback too.</p>
+    <p class="song-help">Supports uncompressed partwise MusicXML (.musicxml, .xml) and standard MIDI with note data, including most piano MIDI downloads. MIDI is not an MP3 or YouTube link: audio recordings don't contain reliable individual key information. Songs with many instruments may be easier to learn by selecting a single track. The kalimba above still works; notes in its range can light up during playback too.</p>
   </section>
-  <p class="footer">v0.12 · Typed state foundations and isolated song-studio architecture · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
+  <p class="footer">v0.13 · MusicXML score import and synchronized notation · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
 </main>
 <div class="audio-recovery" id="audioRecovery" role="status" aria-live="polite" hidden><span id="audioRecoveryMessage">iPhone paused the piano audio. Tap to restore it.</span><button id="audioRestore" type="button">♫ Restore sound</button></div>
   <script type="module" src="./assets/app.js"></script>
