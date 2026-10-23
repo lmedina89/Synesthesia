@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#100f22" />
   <meta name="description" content="Practice piano with an immersive full-screen studio, responsive iPhone audio recovery, scrolling sheet music and glowing keys. Includes kalimba." />
-  <title>Garden Notes v0.9 — Music Accuracy</title>
+  <title>Garden Notes v0.15 — Landscape Practice</title>
   <link rel="stylesheet" href="./assets/styles.css">
 </head>
 <body>
@@ -93,8 +93,9 @@
     <div class="song-buttons"><button class="primary" id="songPlay" type="button">▶ Play song</button><button class="secondary focus-launch" id="songFocus" type="button">⛶ Full-screen practice</button><button class="secondary" id="songReset" type="button">↺ Start over</button><button class="secondary" id="songCenter" type="button">◎ Find glowing keys</button></div>
     <input class="song-progress" id="songProgress" type="range" min="0" max="1000" step="1" value="0" aria-label="Song position" />
     <div class="focus-toolbar" id="focusToolbar" aria-label="Immersive practice controls">
-      <strong>🎹 Practice</strong><button id="focusZoomOut" type="button" aria-label="Make piano keys smaller">−</button><span id="focusZoomLabel" class="focus-zoom-readout">170%</span><button id="focusZoomIn" type="button" aria-label="Make piano keys larger">＋</button><button id="focusPlay" type="button">Ⅱ Pause</button><button id="focusExit" class="focus-exit" type="button">✕ Exit</button>
+      <strong class="focus-brand">🎹 Practice</strong><span class="focus-tempo" id="focusTempoReadout" aria-label="Playback speed">75%</span><button id="focusLayoutToggle" type="button" class="focus-layout-toggle" aria-label="Switch to Piano-first layout" aria-pressed="false">♫ Balanced</button><button id="focusSettingsToggle" type="button" class="focus-settings-toggle" aria-expanded="false" aria-controls="focusSettingsPanel" aria-label="Open practice settings">⚙</button><button id="focusPlay" type="button">Ⅱ Pause</button><button id="focusExit" class="focus-exit" type="button">✕ Exit</button>
     </div>
+    <div id="focusSettingsPanel" class="focus-settings-panel" hidden aria-label="Practice settings"><div class="focus-settings-head"><strong>Practice settings</strong><button id="focusSettingsClose" type="button" aria-label="Close practice settings">✕ Close</button></div><div class="focus-zoom-controls" aria-label="Piano key size"><span>Key size</span><button id="focusZoomOut" type="button" aria-label="Make piano keys smaller">−</button><output id="focusZoomLabel" class="focus-zoom-readout">170%</output><button id="focusZoomIn" type="button" aria-label="Make piano keys larger">＋</button></div><div id="focusSettingsContent" class="focus-settings-content"></div></div>
     <div class="song-now"><strong id="songTitle">Twinkle Twinkle Little Star</strong><span id="songTime">0:00 / 0:00</span></div>
     <div class="score-settings">
       <label for="songKeyNames">Key names <select id="songKeyNames" aria-label="Note labels on song keyboard"><option value="pressed">Show when played</option><option value="all">Show every key</option><option value="off">Hide key labels</option></select></label>
@@ -102,7 +103,7 @@
     </div>
     <div class="live-readout" aria-live="polite"><div id="liveNoteName" class="live-name">C4</div><div id="liveNoteDetail" class="live-notes">Press a piano key to see its name and the note on the staff.<br/>Middle C = C4 · Sharps (♯) are black keys.</div></div>
     <div id="songStaffPanel" class="score-frame" aria-label="Scrolling treble and bass staff for the song">
-      <div class="score-topline"><strong>🎼 Scrolling score & pitch guide</strong><span class="score-help">Right hand • Treble&nbsp;&nbsp; | &nbsp;&nbsp;Left hand • Bass</span><button type="button" id="scoreFitScreen" class="score-fit-button" aria-label="Fit sheet music and piano on screen">⛶ Fit to screen</button></div>
+      <div class="score-topline"><strong>🎼 Scrolling score & pitch guide</strong><span class="focus-score-summary">Sheet music available in Balanced view</span><span class="score-help">Right hand • Treble&nbsp;&nbsp; | &nbsp;&nbsp;Left hand • Bass</span><button type="button" id="scoreFitScreen" class="score-fit-button" aria-label="Fit sheet music and piano on screen">⛶ Fit to screen</button></div>
       <canvas id="songStaffCanvas" class="score-canvas" aria-label="Treble and bass musical staff showing the current notes and upcoming song notes" role="img"></canvas>
       <div class="score-footer"><strong id="scoreRenderStatus">Engraving loading…</strong> · MusicXML retains written pitches, clefs, meter and voices where supported. MIDI notation is inferred; it is not an original score. Falling notes and audio remain available independently.</div>
     </div>
@@ -111,7 +112,7 @@
     <div class="song-feedback" id="songFeedback" aria-live="polite">Ready. Press Play to see keys light up.</div>
     <p class="song-help">Supports uncompressed partwise MusicXML (.musicxml, .xml) and standard MIDI with note data, including most piano MIDI downloads. MIDI is not an MP3 or YouTube link: audio recordings don't contain reliable individual key information. Songs with many instruments may be easier to learn by selecting a single track. The kalimba above still works; notes in its range can light up during playback too.</p>
   </section>
-  <p class="footer">v0.14.1 · Guided section practice, note-reading helper and local MIDI diagnostics · VexFlow engraving integration and inferred-MIDI score labeling · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
+  <p class="footer">v0.14 · Guided section practice, note-reading helper and local MIDI diagnostics · VexFlow engraving integration and inferred-MIDI score labeling · Immersive focus mode, larger practice keys, iPhone Safari sound recovery, scrolling staff, and personal song export. Third-party RPG MIDI files are not bundled in the shared ZIP; personal HTML exports can embed your own downloads. Made for learning, not for perfection. Piano: recorded Yamaha C5 grand-piano samples (internet needed to load); kalimba: synthesized plucks. If samples cannot load, piano falls back to basic tones. Your progress stays on this device. Piano samples by Alexander Holm, Salamander Grand Piano V3, CC BY 3.0.</p>
 </main>
 <div class="audio-recovery" id="audioRecovery" role="status" aria-live="polite" hidden><span id="audioRecoveryMessage">iPhone paused the piano audio. Tap to restore it.</span><button id="audioRestore" type="button">♫ Restore sound</button></div>
   <script defer src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js" id="vexflow-loader"></script>

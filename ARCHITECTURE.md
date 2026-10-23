@@ -18,3 +18,14 @@ The `visual/vexflow-renderer.js` is a progressive enhancement; failures are surf
 `src/core/guided-lesson.js` provides pure deterministic measure resolution, hand-track selection, section filtering, grouped chord validation, and local diagnostic report generation. The existing `src/ui/song-studio.js` composes lesson state with song playback and steps. The existing MIDI parser now preserves a bounded practice-measure table from time-signature and tempo metadata; MIDI with missing/changing meter is explicitly marked approximate. Note help uses the same normalized song events as the keyboard/audio; no fake user scores.
 
 Avoid adding UI/DOM dependencies to `core/guided-lesson.js`. Retain original v0.13.4 as a protected rollback. `v0.14` is deliberately not a new sheet-engraving implementation.
+
+
+## v0.15 landscape presentation boundary
+
+`src/ui/focus-mode.js` now owns the immersive layout state (`balanced` or `piano-first`), settings-drawer DOM relocation with comment-anchor restoration, and horizontal zoom/navigation. `src/styles.css` owns a single-column landscape grid for both layouts; `src/template.html` provides the one mode switch, settings drawer and score summary. Neither playback scheduling, note grouping, midi timing, staff assignment nor instrument rendering was rewritten.
+
+The `song-scroll` viewport is the full screen width in landscape. `song-scroll-inner`, `songRoll` and `songKeys` remain in the same native 1,508-unit coordinate space and receive a single `scaleX`. A single zoom value controls key widths and roll alignment, with keyboard view recentering upon significant resize. The visible keyboard does not claim all 88 keys are simultaneously visible.
+
+Private export (`src/ui/song-library.js`) restores a transient focus layout in a cloned standalone document before exporting, preventing controls being stranded inside a settings drawer on reload.
+
+Validation: 51 existing Node unit tests plus Playwright landscape 844x390, 667x375, 932x430; browser song-guided lesson, import/MusicXML/notation/audio, renderer adapter, responsive score, and portable-song export regression. Physical iPhone Safari/real CDN VexFlow are pending manual smoke testing.

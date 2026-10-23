@@ -1,8 +1,39 @@
-# Garden Notes v0.14.1 — Guided Practice Engine (stability update)
+# Garden Notes v0.15 — Full-width landscape practice
 
-Built incrementally from the **v0.13.4** modular developer source, with the v0.14 guided-practice additions. The prior uploaded v0.14 ZIP remains a separate recovery baseline.
+**Based on the actual v0.14.1 GitHub release**, preserving the v0.14.1 MIDI measure-boundary bug fix and current private-song export behavior. The existing core/transport, audio engine, keyboard geometry and roll painter have not been rewritten.
 
-**v0.14.1 correction:** An exact-end-of-measure MIDI could add an empty measure after its last playable event. This update prevents that off-by-one condition in both the modular site and the standalone file. It also corrects the private export filename version. No lesson controls or audio logic have been redesigned.
+## Landscape practice
+
+- **Balanced** is the default on a new device: a compact toolbar, song/time status, scrolling treble/bass score, falling notes, **full-screen-width piano**, and feedback in a single viewport.
+- **Piano-first** uses the **same full-width keyboard** with taller falling notes and keys, and a compact indication of how to restore sheet music. Tap the mode toggle to switch back. This changes only the presentation, never the song position or timing.
+- The 88-key instrument stays horizontally scrollable at playable sizes; the app does **not** squeeze 88 keys onto one phone screen. Falling notes and piano keys retain the original 1,508-unit shared horizontal coordinate system under one transform.
+- The settings gear opens a scrollable overlay with the **original** song library, MIDI import, playback style/track, speed, guided hand/measure/loop settings, note inspector, key-label visibility, reset/center controls, progress seek and keyboard zoom. No duplicate transport inputs.
+- Exiting immersive practice restores those DOM controls to their original positions. The mode preference is stored locally and defaults to Balanced if unset. Landscape sizes and orientation changes are handled without vertical scrolling of the practice surface.
+
+## Important limitations
+
+- The score is vertically compact on short landscape viewports; Piano-first deliberately collapses it to a guide bar until returning to Balanced. A full-sized two-staff score cannot occupy the same space as a large full-width keyboard on a short phone screen.
+- iPhone Safari hardware and the CDN-provided real VexFlow 4.2.2 glyph renderer remain device-only acceptance checks. Chromium simulation validates geometry, logic and fallback, not physical touch/audio hardware.
+- Personal imported third-party MIDI songs are **not bundled** into the public release. Personal standalone exports may embed the owner's own songs.
+
+## Build and tests
+
+```sh
+python scripts/build.py
+node --test tests/*.test.mjs
+python tests/landscape_layout_browser.py
+python tests/focus_export_browser.py
+bash scripts/validate.sh
+python scripts/package.py
+```
+
+Both ZIP files have **no enclosing directory**. For GitHub Pages, extract the GitHub-ready ZIP directly into the repository root, with `index.html` at the root. The developer-source ZIP retains build scripts and the known-good earlier baselines.
+
+---
+
+# Garden Notes v0.14 — Guided Practice Engine (release candidate)
+
+Built incrementally from the **v0.13.4** modular developer source. All existing releases are kept unchanged as recovery baselines.
 
 ## New: Guided Lesson
 
@@ -36,22 +67,27 @@ For normal full-song playback, leave the lesson or use Watch & Listen outside th
 
 88-key piano and real Yamaha C5 samples with fallback, kalimba, falling notes, MIDI/MusicXML import, personal indexedDB song library and private HTML export, screen-filling responsive practice, Safari audio recovery, and sheet-music renderer/fallback.
 
-## Testing this distribution
-
-This is the **GitHub-ready distribution**, not the full developer repository: the original `scripts/build.py` and browser regression scripts were not supplied in the uploaded v0.14 ZIP. These new, independently authored checks are included so this package can be tested with Node 22+ without installing dependencies.
+## Development
 
 ```sh
-npm test
+python scripts/build.py
+node --test tests/guided-lesson.test.mjs
+python tests/guided_browser.py
 bash scripts/validate.sh
 ```
 
-The suite checks MIDI parsing, note/track selection, measure boundaries (including the v0.14.1 regression), chords, diagnostics and transport scheduling. `validate.sh` also checks JavaScript syntax, distribution file integrity and the standalone bug fix. **Neither tool simulates the iPhone Safari touch/audio environment.**
+Build outputs are in `dist/`. The GitHub-ready ZIP uses native ES modules and separate CSS, not a monolithic runtime HTML. The stand-alone private HTML export is built from the same modules and may embed a user's own imported MIDI songs.
 
-### Earlier v0.14 verification, per original release documentation
+### Verification completed in this environment
 
-- The original v0.14 README reported 51/51 unit tests and desktop/simulated-iPhone Chromium validation. Their test code was **not included** in that ZIP, so that result was not independently reproducible from the upload alone.
-- Real iPhone Safari touch chords, audio interruptions and saved-song persistence still require physical-device validation.
-- VexFlow 4.2.2 is loaded from a CDN and has not been independently runtime-tested in this offline package.
-- Your **personal Balamb Garden MIDI** is not bundled here. Import it into the app and use **Copy MIDI diagnostic** to confirm real measure and track structure.
+- 51/51 unit tests, including 7 new guided practice tests.
+- Desktop and simulated iPhone Chromium: guided defaults, labeled right-hand MIDI track filtering, note feedback, 1–4 looping, note inspector, diagnostic action, and normal watch/listen regression.
+- Existing desktop/mobile/landscape, MIDI/MusicXML, simulated audio interruption, engraving adapter/fallback, and private MIDI export tests completed. The combined shell suite exceeded the runner's time budget late in the run; its final public-export case passed separately.
+
+### Outstanding gates
+
+- Physical iPhone Safari validation of touch chords, playback, audio interruptions and saved-song persistence.
+- Real VexFlow 4.2.2 integration remains CDN-loaded and was not available for testing locally; existing fallback is retained.
+- Verify your **specific personal Balamb Garden MIDI** by sharing the text diagnostic; that file lives in your browser and is not included here.
 
 This is a personal tool; third-party arrangements are **not bundled** with the public GitHub release.

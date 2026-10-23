@@ -1,18 +1,23 @@
 {
-  "version": "0.14.1",
-  "kind": "guided-lesson-stability",
-  "fixes": [
-    "Avoid empty inferred MIDI measure at a song end exactly on a measure boundary",
-    "Private HTML export filename updated to v0.14.1"
-  ],
+  "version": "0.15",
+  "kind": "landscape-full-width-layout",
   "module_count": 25,
-  "third_party_midi_bundled": false,
   "sha256": {
-    "index.html": "e7f2e1f7c4ae14d47b1b5aff0296826688c1e38de6870543eab75c3d7879047f",
-    "standalone.html": "87bd939ae9f0e29a1055b0c147bfe001edfb1d8749d82264bc1afcee50d53b9e",
+    "index.html": "99cd36056f0bb2607950b1fd97e8e71e187a047a02b0835e26e212d56f6918cc",
+    "standalone.html": "8453bba3787683768ea0fb1d1fa9d64d409c8142d5d925875e68058478bb0dfa",
     "assets/app.js": "ba751fda46467cc2d92c03a146de87b67e98912d27ad51fb530eba5345e805bc",
-    "assets/styles.css": "f6f7a5bc86823558cb9c4fda2adb088be59a8250900d28b5af77ff7a5a8772c6",
+    "assets/styles.css": "455ea4f29c0d9f91473e0709f7a288471cda5aa73f8ea81a8f1c4c793234ccc7",
+    "assets/ui/focus-mode.js": "29b14874370416961aee89e54bc7fee9ebbe9ed7d1e3725f65fdc63b85e86713",
+    "assets/ui/song-library.js": "63646fcce0bc98b117112d546f576b701f9fe260cf8277f08a4d10daf593c27f",
     "assets/core/midi.js": "df077ef94215b160972d1dcb812e231e6f04a3ffa84481cfef6503db529aa6b6",
-    "assets/ui/song-library.js": "113c61abe2f102e15f1c882b2bd1c92557a1b67f33a0b4bdd8b4ace657fa3fdc"
-  }
+    "assets/ui/song-keyboard.js": "b15c88aad09b9de5ec123f1d0bc90216cdee6490f18011f66c70c3d3c5a88f6c",
+    "assets/visual/roll-renderer.js": "f850904bcb11ea4170fd3d7cc15b1e4ef6233adaef81235408dbfc9995c8045e"
+  },
+  "third_party_midi_bundled": false,
+  "baseline": "v0.14.1",
+  "landscape_modes": [
+    "balanced",
+    "piano-first"
+  ],
+  "keyboard": "full viewport width; scrollable 88-key range"
 }

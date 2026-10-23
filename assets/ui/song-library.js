@@ -95,6 +95,24 @@ export function createSongLibrary({$,callbacks}) {
         source='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
       }
       const clone=new DOMParser().parseFromString(source,'text/html').documentElement;
+      // A private standalone can be exported from its immersive settings
+      // drawer. Restore the clone's original control positions and neutral
+      // viewport state; never publish a copy stranded in focus mode.
+      const clonedStudio=clone.querySelector('#songStudio');
+      if(clonedStudio){
+        clonedStudio.classList.remove('practice-focus','practice-balanced','practice-piano-first');
+        clone.querySelector('body')?.classList.remove('focus-active');
+        const panel=clone.querySelector('#focusSettingsPanel');
+        if(panel)panel.setAttribute('hidden','');
+        const content=clone.querySelector('#focusSettingsContent');
+        const anchors=[...clonedStudio.childNodes].filter(n=>n.nodeType===8&&n.nodeValue==='focus-settings-origin');
+        const order=['.rpg-library','.song-loaders','.song-options','.guided-lesson','.song-buttons','.song-progress','.score-settings'];
+        for(let i=0;i<anchors.length;i++){
+          const item=content?.querySelector(':scope > '+order[i]);
+          if(item)anchors[i].replaceWith(item);
+          else anchors[i].remove();
+        }
+      }
       for(const selector of ['#piano','#tineRow','#kalimbaNoteGrid','#songKeys','#notesLine','#staffScore'])clone.querySelector(selector)?.replaceChildren();
       const track=clone.querySelector('#songTrack');if(track)track.replaceChildren(new Option('All notes','all'));
       const old=clone.querySelector('#private-song-pack');old?.remove();
@@ -102,7 +120,7 @@ export function createSongLibrary({$,callbacks}) {
       clone.querySelector('head').append(data);
       const out='<!DOCTYPE html>\n'+clone.outerHTML;
       const blob=new Blob([out],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.14.1_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
+      const a=document.createElement('a');a.href=url;a.download='Garden_Notes_v0.15_PRIVATE_Songs.html';document.body.append(a);a.click();a.remove();
       setTimeout(()=>URL.revokeObjectURL(url),15000);
       $('songLibraryStatus').textContent='✓ Exported private HTML with '+Object.keys(merged).length+' embedded MIDI song(s). Keep it private; the iPhone Files preview may not run interactive HTML.';
     }catch(e){$('songLibraryStatus').textContent='Could not create private song copy: '+(e.message||'export failed');}

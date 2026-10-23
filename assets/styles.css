@@ -206,7 +206,7 @@
     .audio-recovery button{flex:none;min-height:43px;border:0;border-radius:9px;background:#c6a9ff;color:#22152f;font-weight:850;font-size:12px;padding:10px 12px;}
     body.focus-active{overflow:hidden!important;overscroll-behavior:none;}
     #songStudio.practice-focus{position:fixed;z-index:1000;inset:0;inset:0 0 env(safe-area-inset-bottom) 0;max-width:none;margin:0!important;padding:calc(env(safe-area-inset-top) + 6px) 8px 7px;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto minmax(170px,1.12fr) minmax(170px,1.18fr) auto;gap:6px;border:0;border-radius:0;background:#151427;box-shadow:none;overflow:hidden;height:100vh;height:100dvh;}
-    #songStudio.practice-focus > :not(.focus-toolbar):not(.song-now):not(.score-frame):not(.song-scroll):not(.song-feedback):not(.live-readout){display:none!important;}
+    #songStudio.practice-focus > :not(.focus-toolbar):not(.song-now):not(.score-frame):not(.song-scroll):not(.song-feedback):not(.live-readout):not(.focus-settings-panel){display:none!important;}
     #songStudio.practice-focus .focus-toolbar{display:flex;}
     #songStudio.practice-focus .song-now{display:flex;padding:1px 4px;font-size:12px;min-height:21px;flex-wrap:nowrap;}
     #songStudio.practice-focus .song-now strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -281,3 +281,89 @@
 .lesson-note-chips button{background:#342b51;color:#f5eaff;border:1px solid #7961a0;border-radius:9px;padding:8px 12px;min-height:39px;font-size:13px;font-weight:750;}
 .lesson-inspect{color:#b9e8d1;min-height:19px;font-size:12px;margin-top:9px;line-height:1.45;}
 @media(max-width:650px){.lesson-controls{grid-template-columns:repeat(2,minmax(0,1fr));}.guided-lesson{padding:12px;}}
+
+/* v0.15 — landscape practice uses the entire screen width for the keys.
+   The 88-key roll and keyboard remain in the SAME scaled coordinate space. */
+.focus-toolbar .focus-tempo{font-size:12px;font-weight:800;color:#f4d6a8;white-space:nowrap;}
+.focus-toolbar .focus-brand{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.focus-layout-toggle{white-space:nowrap;}
+.focus-settings-panel[hidden]{display:none!important;}
+.focus-settings-panel{display:none;}
+.focus-score-summary{display:none;}
+#songStudio.practice-focus > .focus-settings-panel{display:block;position:absolute;z-index:8;top:calc(env(safe-area-inset-top) + 49px);right:8px;width:min(540px,calc(100vw - 16px));max-height:calc(100% - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 58px);overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;background:#211a34;color:#f4eaff;border:1px solid #937ab4;border-radius:14px;box-shadow:0 15px 60px #000c;padding:12px;}
+.focus-settings-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.focus-settings-head button,.focus-zoom-controls button{color:#f9f0ff;background:#372c53;border:1px solid #6e568b;border-radius:8px;min-height:36px;min-width:40px;padding:6px 10px;}
+.focus-zoom-controls{display:flex;gap:9px;align-items:center;margin:8px 0 13px;}
+.focus-zoom-controls span{margin-right:auto;font-size:12px;}
+#songStudio.practice-focus .focus-settings-panel .guided-lesson{margin:10px 0;}
+#songStudio.practice-focus .focus-settings-panel .rpg-library{margin:8px 0;}
+#songStudio.practice-focus .focus-settings-panel .song-progress{margin:10px 0 14px;min-height:24px;}
+#songStudio.practice-focus .focus-settings-panel .song-options{margin-bottom:10px;}
+#songStudio.practice-focus .focus-settings-panel .song-buttons{margin-top:11px;}
+#songStudio.practice-focus .focus-settings-panel .score-settings{margin-top:10px;}
+#songStudio.practice-focus .focus-settings-panel .lesson-controls{grid-template-columns:repeat(2,minmax(0,1fr));}
+#songStudio.practice-focus .focus-settings-panel .song-loaders{margin:10px 0;}
+#songStudio.practice-focus .song-scroll{width:100%;max-width:100%;box-sizing:border-box;}
+#songStudio.practice-focus .focus-toolbar{min-width:0;}
+#songStudio.practice-focus .song-now{min-width:0;}
+
+@media (orientation:landscape) and (max-height:650px){
+  #songStudio.practice-focus{
+    inset:0;box-sizing:border-box;width:100%;max-width:none;height:100dvh;
+    display:grid;grid-template-columns:minmax(0,1fr);
+    grid-template-rows:42px 19px minmax(65px,0.95fr) minmax(140px,1.9fr) 24px;
+    gap:3px;padding:calc(env(safe-area-inset-top) + 2px) 0 calc(env(safe-area-inset-bottom) + 2px);
+    overflow:hidden;
+  }
+  #songStudio.practice-focus .focus-toolbar{display:flex;grid-column:1;grid-row:1;margin:0;padding:0 7px;min-height:0;gap:5px;}
+  #songStudio.practice-focus .focus-toolbar button{min-height:34px;min-width:35px;padding:4px 9px;font-size:12px;}
+  #songStudio.practice-focus .focus-toolbar .focus-layout-toggle{min-width:94px;}
+  #songStudio.practice-focus .focus-brand{font-size:12px;}
+  #songStudio.practice-focus .song-now{display:flex!important;grid-column:1;grid-row:2;padding:0 9px;min-height:0;font-size:11px;line-height:17px;gap:10px;overflow:hidden;}
+  #songStudio.practice-focus .song-now strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #songStudio.practice-focus .song-now span{white-space:nowrap;flex:none;}
+  #songStudio.practice-focus .score-frame{grid-column:1;grid-row:3;margin:0 5px;min-width:0;min-height:0;border-radius:9px;overflow:hidden;}
+  #songStudio.practice-focus .score-topline{min-height:24px;max-height:24px;box-sizing:border-box;padding:3px 9px;gap:3px;}
+  #songStudio.practice-focus .score-topline strong{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #songStudio.practice-focus .engraved-score,#songStudio.practice-focus .score-canvas{min-height:0;height:100%;flex:1;}
+  #songStudio.practice-focus .song-scroll{grid-column:1;grid-row:4;height:100%;margin:0;border-radius:0;border-left:0;border-right:0;min-height:0;}
+  #songStudio.practice-focus .song-scroll-scale{height:100%;}
+  #songStudio.practice-focus .song-scroll-inner{height:100%;}
+  #songStudio.practice-focus #songRoll{height:43%;border-bottom:3px solid #ad91eb;box-sizing:border-box;}
+  #songStudio.practice-focus #songKeys{height:57%;}
+  #songStudio.practice-focus .song-white{height:100%;}
+  #songStudio.practice-focus .song-black{height:62%;}
+  #songStudio.practice-focus .song-feedback{display:block;grid-column:1;grid-row:5;min-height:0;max-height:24px;margin:0;padding:2px 9px;font-size:12px;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #songStudio.practice-focus .live-readout{display:none!important;}
+  #songStudio.practice-focus.practice-piano-first{grid-template-rows:42px 19px 28px minmax(140px,1fr) 24px;}
+  #songStudio.practice-focus.practice-piano-first .score-frame{min-height:0;}
+  #songStudio.practice-focus.practice-piano-first .score-topline{height:100%;max-height:none;min-height:0;}
+  #songStudio.practice-focus.practice-piano-first .score-topline strong{display:none;}
+  #songStudio.practice-focus.practice-piano-first .focus-score-summary{display:block;font-size:11px;font-weight:700;color:#f5e6ff;}
+  #songStudio.practice-focus.practice-piano-first .engraved-score,#songStudio.practice-focus.practice-piano-first .score-canvas{display:none!important;}
+  #songStudio.practice-focus.practice-piano-first #songRoll{height:51%;}
+  #songStudio.practice-focus.practice-piano-first #songKeys{height:49%;}
+  #songStudio.practice-focus > .focus-settings-panel{top:calc(env(safe-area-inset-top) + 44px);}
+}
+@media (orientation:landscape) and (max-height:340px){
+  #songStudio.practice-focus{grid-template-rows:36px 17px minmax(50px,.7fr) minmax(115px,1.9fr) 18px;gap:2px;}
+  #songStudio.practice-focus .focus-toolbar button{min-height:30px;}
+  #songStudio.practice-focus .song-feedback{font-size:11px;line-height:16px;}
+  #songStudio.practice-focus.practice-piano-first{grid-template-rows:36px 17px 24px minmax(115px,1fr) 18px;}
+}
+@media (max-width:560px){
+  #songStudio.practice-focus .focus-toolbar button{padding:3px 6px;}
+  #songStudio.practice-focus .focus-brand{font-size:11px;}
+  #songStudio.practice-focus .focus-tempo{font-size:10px;}
+}
+
+/* Modes remain meaningful if the phone is rotated after a landscape session. */
+@media (orientation:portrait){
+  #songStudio.practice-focus.practice-piano-first{grid-template-rows:auto auto auto minmax(35px,.3fr) minmax(170px,2.5fr) auto;}
+  #songStudio.practice-focus.practice-piano-first .score-frame{min-height:0;}
+  #songStudio.practice-focus.practice-piano-first .score-topline strong{display:none;}
+  #songStudio.practice-focus.practice-piano-first .focus-score-summary{display:block;font-size:11px;font-weight:700;}
+  #songStudio.practice-focus.practice-piano-first .engraved-score,#songStudio.practice-focus.practice-piano-first .score-canvas{display:none!important;}
+  #songStudio.practice-focus.practice-piano-first #songRoll{height:50%;}
+  #songStudio.practice-focus.practice-piano-first #songKeys{height:50%;}
+}
