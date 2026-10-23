@@ -77,7 +77,7 @@ export const Midi = (() => {
     const beatsPerBar=meter.numerator*4/meter.denominator;
     const practiceMeasures=[];
     const endBeat=Math.max(end>0?lastTick/division:0,...finished.map(n=>n.endBeat||0));
-    for(let beat=0;beat<endBeat+.00001&&practiceMeasures.length<2000;beat+=beatsPerBar){
+    for(let beat=0;beat<endBeat-0.0000001&&practiceMeasures.length<2000;beat+=beatsPerBar){
       const a=secAt(Math.round(beat*division)),b=secAt(Math.round((beat+beatsPerBar)*division));
       practiceMeasures.push({number:practiceMeasures.length+1,start:a,end:Math.min(end,b)});
     }

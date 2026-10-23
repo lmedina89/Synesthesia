@@ -1,12 +1,18 @@
 {
-  "version": "0.14",
-  "kind": "guided-lesson-engine",
+  "version": "0.14.1",
+  "kind": "guided-lesson-stability",
+  "fixes": [
+    "Avoid empty inferred MIDI measure at a song end exactly on a measure boundary",
+    "Private HTML export filename updated to v0.14.1"
+  ],
   "module_count": 25,
+  "third_party_midi_bundled": false,
   "sha256": {
-    "index.html": "652cc7289d95fc0bc44e52a167b11dd00d52216378556ab974837415b2ae7696",
-    "standalone.html": "1b6cabc0c7d914693d9298146b896a7fac1d1522fb2df847866c0deab7e3b116",
+    "index.html": "e7f2e1f7c4ae14d47b1b5aff0296826688c1e38de6870543eab75c3d7879047f",
+    "standalone.html": "87bd939ae9f0e29a1055b0c147bfe001edfb1d8749d82264bc1afcee50d53b9e",
     "assets/app.js": "ba751fda46467cc2d92c03a146de87b67e98912d27ad51fb530eba5345e805bc",
-    "assets/styles.css": "f6f7a5bc86823558cb9c4fda2adb088be59a8250900d28b5af77ff7a5a8772c6"
-  },
-  "third_party_midi_bundled": false
+    "assets/styles.css": "f6f7a5bc86823558cb9c4fda2adb088be59a8250900d28b5af77ff7a5a8772c6",
+    "assets/core/midi.js": "df077ef94215b160972d1dcb812e231e6f04a3ffa84481cfef6503db529aa6b6",
+    "assets/ui/song-library.js": "113c61abe2f102e15f1c882b2bd1c92557a1b67f33a0b4bdd8b4ace657fa3fdc"
+  }
 }
