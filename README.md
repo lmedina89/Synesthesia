@@ -1,3 +1,12 @@
+# Garden Notes v0.15.1 — Landscape mode-selector hotfix
+
+- Two explicit **Balanced** and **Piano-first** buttons replace the ambiguous single toggle. The selected view remains highlighted and does not reset the lesson when tapped again.
+- Slightly more height for the sheet-music pane in Balanced on short landscape screens; piano remains full viewport width in both modes.
+- Saved view selection persists through exiting/re-entering. Prior v0.15.0 files are retained separately as the recovery baseline.
+- Existing scoring, MIDI import, playback, sample audio, and timing engines are unchanged.
+
+---
+
 # Garden Notes v0.15 — Full-width landscape practice
 
 **Based on the actual v0.14.1 GitHub release**, preserving the v0.14.1 MIDI measure-boundary bug fix and current private-song export behavior. The existing core/transport, audio engine, keyboard geometry and roll painter have not been rewritten.

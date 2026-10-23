@@ -1,4 +1,4 @@
-// v0.15 landscape presentation controller. Does not mutate transport, audio,
+// v0.15.1 landscape presentation controller. Does not mutate transport, audio,
 // note grouping or notation; uses the original settings controls, not clones.
 export function createFocusMode({$,songUi,callbacks}) {
   const STORAGE_KEY='garden-notes-landscape-layout-v1';
@@ -20,14 +20,18 @@ export function createFocusMode({$,songUi,callbacks}) {
     const piano=layout==='piano-first';
     $('songStudio').classList.toggle('practice-piano-first',piano);
     $('songStudio').classList.toggle('practice-balanced',!piano);
-    $('focusLayoutToggle').textContent=piano?'🎹 Piano-first':'♫ Balanced';
-    $('focusLayoutToggle').setAttribute('aria-pressed',String(piano));
-    $('focusLayoutToggle').setAttribute('aria-label',piano?'Switch to Balanced layout':'Switch to Piano-first layout');
+    // Explicit, non-toggling choices: the active mode is always visible.
+    // Avoid presenting a selected-mode label as though it were a dropdown.
+    $('focusBalancedMode').setAttribute('aria-pressed',String(!piano));
+    $('focusPianoMode').setAttribute('aria-pressed',String(piano));
     $('songStaffPanel').setAttribute('aria-label',piano?'Sheet music condensed; switch to Balanced to read it':'Scrolling treble and bass staff for the song');
     // Notation measures available height after a layout change. No song reset.
     if(focusActive)requestAnimationFrame(()=>callbacks.renderStaff(callbacks.position()));
   }
-  function toggleLayout(){layout=layout==='balanced'?'piano-first':'balanced';
+  function selectLayout(next){
+    if(next!== 'balanced' && next!== 'piano-first')return;
+    if(next===layout)return; // Selecting the active mode never resets practice.
+    layout=next;
     try{localStorage.setItem(STORAGE_KEY,layout);}catch(e){}
     applyLayout();
   }
@@ -77,10 +81,11 @@ export function createFocusMode({$,songUi,callbacks}) {
     callbacks.renderStaff(callbacks.position());
   }
   $('songFocus').addEventListener('click',()=>focusActive?exitFocus():enterFocus());
-  $('scoreFitScreen').addEventListener('click',()=>focusActive?toggleLayout():enterFocus());
+  $('scoreFitScreen').addEventListener('click',()=>focusActive?selectLayout('balanced'):enterFocus());
   $('focusExit').addEventListener('click',exitFocus);
   $('focusPlay').addEventListener('click',()=>callbacks.playSong());
-  $('focusLayoutToggle').addEventListener('click',toggleLayout);
+  $('focusBalancedMode').addEventListener('click',()=>selectLayout('balanced'));
+  $('focusPianoMode').addEventListener('click',()=>selectLayout('piano-first'));
   $('focusSettingsToggle').addEventListener('click',()=>setSettingsOpen(!settingsOpen));
   $('focusSettingsClose').addEventListener('click',()=>{setSettingsOpen(false);$('focusSettingsToggle').focus({preventScroll:true});});
   $('songSpeed').addEventListener('input',refreshTempo);

@@ -1,3 +1,7 @@
+## v0.15.1 small UI hotfix
+
+Replaces the ambiguous mode toggle with two explicit buttons, each wired to `selectLayout(next)` with `aria-pressed` synchronization. A no-op selection keeps transport and lesson state intact. CSS grants Balanced score more vertical room in short landscape screens without altering shared X-coordinates for roll/keyboard.
+
 # Garden Notes v0.13.4 architecture
 
 The v0.13.1 modular structure is preserved. `src/core/engraving-model.js` prepares a bounded, non-DOM model of the visible MusicXML or inferred-MIDI staff voices. `src/visual/vexflow-renderer.js` uses VexFlow to draw only four nearby measures into SVG, with a notehead-anchored cursor interpolated between onset positions. `src/ui/song-notation.js` selects VexFlow if available and automatically falls back to the older Canvas guide otherwise. The fall-through is never allowed to interrupt the audio or rolling-key visualizer.

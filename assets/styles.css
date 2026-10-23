@@ -286,7 +286,12 @@
    The 88-key roll and keyboard remain in the SAME scaled coordinate space. */
 .focus-toolbar .focus-tempo{font-size:12px;font-weight:800;color:#f4d6a8;white-space:nowrap;}
 .focus-toolbar .focus-brand{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;}
-.focus-layout-toggle{white-space:nowrap;}
+/* Two unambiguous iPhone-size tap targets. Both views keep the same full-width keyboard. */
+.focus-layout-options{display:inline-flex;gap:2px;border:1px solid #65537d;padding:2px;border-radius:10px;background:#1d1931;flex:none;align-items:center;}
+.focus-toolbar .focus-layout-options button{white-space:nowrap;border:0;border-radius:7px;min-width:0;min-height:37px;padding:5px 9px;background:transparent;color:#c5b7da;font-size:12px;touch-action:manipulation;position:relative;z-index:1;}
+.focus-toolbar .focus-layout-options button[aria-pressed="true"]{background:#604783;color:#fff5ff;box-shadow:inset 0 0 0 1px #b799df;font-weight:850;}
+.focus-toolbar .focus-layout-options button:focus-visible{outline:2px solid #ffe4a3;outline-offset:1px;}
+
 .focus-settings-panel[hidden]{display:none!important;}
 .focus-settings-panel{display:none;}
 .focus-score-summary{display:none;}
@@ -311,19 +316,19 @@
   #songStudio.practice-focus{
     inset:0;box-sizing:border-box;width:100%;max-width:none;height:100dvh;
     display:grid;grid-template-columns:minmax(0,1fr);
-    grid-template-rows:42px 19px minmax(65px,0.95fr) minmax(140px,1.9fr) 24px;
+    grid-template-rows:42px 19px minmax(105px,1.15fr) minmax(140px,1.8fr) 24px;
     gap:3px;padding:calc(env(safe-area-inset-top) + 2px) 0 calc(env(safe-area-inset-bottom) + 2px);
     overflow:hidden;
   }
   #songStudio.practice-focus .focus-toolbar{display:flex;grid-column:1;grid-row:1;margin:0;padding:0 7px;min-height:0;gap:5px;}
   #songStudio.practice-focus .focus-toolbar button{min-height:34px;min-width:35px;padding:4px 9px;font-size:12px;}
-  #songStudio.practice-focus .focus-toolbar .focus-layout-toggle{min-width:94px;}
+  #songStudio.practice-focus .focus-toolbar .focus-layout-options button{min-height:32px;min-width:0;padding:4px 8px;font-size:11px;}
   #songStudio.practice-focus .focus-brand{font-size:12px;}
   #songStudio.practice-focus .song-now{display:flex!important;grid-column:1;grid-row:2;padding:0 9px;min-height:0;font-size:11px;line-height:17px;gap:10px;overflow:hidden;}
   #songStudio.practice-focus .song-now strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   #songStudio.practice-focus .song-now span{white-space:nowrap;flex:none;}
   #songStudio.practice-focus .score-frame{grid-column:1;grid-row:3;margin:0 5px;min-width:0;min-height:0;border-radius:9px;overflow:hidden;}
-  #songStudio.practice-focus .score-topline{min-height:24px;max-height:24px;box-sizing:border-box;padding:3px 9px;gap:3px;}
+  #songStudio.practice-focus .score-topline{min-height:21px;max-height:21px;box-sizing:border-box;padding:2px 9px;gap:3px;}
   #songStudio.practice-focus .score-topline strong{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   #songStudio.practice-focus .engraved-score,#songStudio.practice-focus .score-canvas{min-height:0;height:100%;flex:1;}
   #songStudio.practice-focus .song-scroll{grid-column:1;grid-row:4;height:100%;margin:0;border-radius:0;border-left:0;border-right:0;min-height:0;}
@@ -346,7 +351,7 @@
   #songStudio.practice-focus > .focus-settings-panel{top:calc(env(safe-area-inset-top) + 44px);}
 }
 @media (orientation:landscape) and (max-height:340px){
-  #songStudio.practice-focus{grid-template-rows:36px 17px minmax(50px,.7fr) minmax(115px,1.9fr) 18px;gap:2px;}
+  #songStudio.practice-focus{grid-template-rows:36px 17px minmax(85px,1.15fr) minmax(115px,1.7fr) 18px;gap:2px;}
   #songStudio.practice-focus .focus-toolbar button{min-height:30px;}
   #songStudio.practice-focus .song-feedback{font-size:11px;line-height:16px;}
   #songStudio.practice-focus.practice-piano-first{grid-template-rows:36px 17px 24px minmax(115px,1fr) 18px;}
@@ -366,4 +371,10 @@
   #songStudio.practice-focus.practice-piano-first .engraved-score,#songStudio.practice-focus.practice-piano-first .score-canvas{display:none!important;}
   #songStudio.practice-focus.practice-piano-first #songRoll{height:50%;}
   #songStudio.practice-focus.practice-piano-first #songKeys{height:50%;}
+}
+
+@media(orientation:landscape) and (max-width:720px){
+  #songStudio.practice-focus .focus-toolbar .focus-layout-options button{font-size:10px;padding:4px 6px;}
+  #songStudio.practice-focus .focus-toolbar{gap:3px;padding:0 4px;}
+  #songStudio.practice-focus .focus-brand{font-size:11px;}
 }

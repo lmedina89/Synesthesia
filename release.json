@@ -1,13 +1,13 @@
 {
-  "version": "0.15",
+  "version": "0.15.1",
   "kind": "landscape-full-width-layout",
   "module_count": 25,
   "sha256": {
-    "index.html": "99cd36056f0bb2607950b1fd97e8e71e187a047a02b0835e26e212d56f6918cc",
-    "standalone.html": "8453bba3787683768ea0fb1d1fa9d64d409c8142d5d925875e68058478bb0dfa",
+    "index.html": "7631a478854fd36d1a8bed6c84c23e11314169cb5c8bf334f26019f085fc8418",
+    "standalone.html": "5f8986f896376222e863cbd605dba97e8b9a0edbfdd54428a81effe0a78150c9",
     "assets/app.js": "ba751fda46467cc2d92c03a146de87b67e98912d27ad51fb530eba5345e805bc",
-    "assets/styles.css": "455ea4f29c0d9f91473e0709f7a288471cda5aa73f8ea81a8f1c4c793234ccc7",
-    "assets/ui/focus-mode.js": "29b14874370416961aee89e54bc7fee9ebbe9ed7d1e3725f65fdc63b85e86713",
+    "assets/styles.css": "d23689e60a46d3f7d6c3d831cb70091f2ebf353d5f45b62899541cceaf7363aa",
+    "assets/ui/focus-mode.js": "9c313a187792954450cceaa5404bf46aff7ea09b1e5f215aff91632c2a618d28",
     "assets/ui/song-library.js": "63646fcce0bc98b117112d546f576b701f9fe260cf8277f08a4d10daf593c27f",
     "assets/core/midi.js": "df077ef94215b160972d1dcb812e231e6f04a3ffa84481cfef6503db529aa6b6",
     "assets/ui/song-keyboard.js": "b15c88aad09b9de5ec123f1d0bc90216cdee6490f18011f66c70c3d3c5a88f6c",
